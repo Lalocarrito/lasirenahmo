@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LoginModal from '@/components/auth/LoginModal';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
-import { Post, Profile } from '@/types';
+import { Profile } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
@@ -36,14 +36,6 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const { data: posts = [] } = useQuery<Post[]>({
-    queryKey: ['posts'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Post[];
-    }
-  });
 
   // Removed manual dark mode useEffect
 
@@ -127,30 +119,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Stories Section */}
-      <section className="pt-32 px-4 md:px-8 max-w-7xl mx-auto">
-        <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar no-scrollbar">
-          {posts.filter(p => p.type === 'story').map((story) => (
-            <motion.div
-              key={story.id}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex-shrink-0 w-24 h-32 md:w-28 md:h-40 rounded-2xl p-0.5 bg-gradient-to-tr from-primary to-accent cursor-pointer group"
-            >
-              <div className="w-full h-full rounded-2xl bg-card overflow-hidden relative">
-                {story.image_url ? (
-                  <img src={story.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                ) : (
-                  <div className="w-full h-full bg-primary/5 flex items-center justify-center p-3 text-center text-foreground">
-                    <p className="text-[10px] md:text-xs font-medium leading-tight line-clamp-4">{story.content}</p>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
 
       {/* Hero Section */}
       <section id="inicio" className="relative px-8 pt-20 pb-20 flex flex-col items-center text-center">
@@ -173,35 +141,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stories/News Feed Section */}
-      {posts.filter(p => p.type === 'feed').length > 0 && (
-        <section className="px-8 py-20 bg-primary/5">
-          <div className="max-w-7xl mx-auto">
-            <h2 className={`${playfair.className} text-4xl mb-12 text-center`}>Nuestras Novedades</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.filter(p => p.type === 'feed').slice(0, 3).map((post) => (
-                <div key={post.id} className="glass-card flex flex-col h-full bg-white/40 dark:bg-black/20">
-                  {post.image_url && (
-                    <div className="h-52 w-full mb-6 overflow-hidden rounded-2xl">
-                      <img src={post.image_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-3">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-6">{post.content}</p>
-                  </div>
-                  <div className="flex justify-between items-center pt-6 border-t border-primary/10">
-                    <span className="text-xs text-primary font-bold">{new Date(post.created_at).toLocaleDateString()}</span>
-                    <button className="text-xs font-bold uppercase tracking-widest text-foreground hover:text-primary transition-colors flex items-center gap-1">
-                      Leer más <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
 
       {/* Booking Section */}

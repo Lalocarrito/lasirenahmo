@@ -32,14 +32,7 @@ export interface Appointment {
   profiles?: Profile; // For joined queries
 }
 
-export interface Post {
-  id: string;
-  title: string;
-  content: string;
-  image_url?: string;
-  type: 'feed' | 'story';
-  created_at: string;
-}
+
 
 export interface BusinessAvailability {
   id: string;

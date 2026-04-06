@@ -7,7 +7,6 @@ import {
     Calendar,
     Users,
     Settings,
-    Image as ImageIcon,
     LogOut,
     Plus,
     Loader2,
@@ -23,15 +22,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-import { Appointment, Service, Post, BusinessAvailability, BusinessAvailabilityOverride, Profile } from '@/types';
+import { Appointment, Service, BusinessAvailability, BusinessAvailabilityOverride, Profile } from '@/types';
 
 import OverviewTab from '@/components/admin/tabs/OverviewTab';
 import AppointmentsTab from '@/components/admin/tabs/AppointmentsTab';
 import CatalogTab from '@/components/admin/tabs/CatalogTab';
 import AvailabilityTab from '@/components/admin/tabs/AvailabilityTab';
-import PostsTab from '@/components/admin/tabs/PostsTab';
 import ServiceModal from '@/components/admin/modals/ServiceModal';
-import PostModal from '@/components/admin/modals/PostModal';
 import ManageAppointmentModal from '@/components/admin/modals/ManageAppointmentModal';
 import ClientsTab from '@/components/admin/tabs/ClientsTab';
 import StaffTab from '@/components/admin/tabs/StaffTab';
@@ -45,13 +42,11 @@ const TABS = [
     { name: 'Catálogo', icon: List },
     { name: 'Equipo', icon: Users },
     { name: 'Disponibilidad', icon: Settings },
-    { name: 'Posts', icon: ImageIcon },
 ];
 
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('Overview');
     const [editingService, setEditingService] = useState<Service | null>(null);
-    const [editingPost, setEditingPost] = useState<Post | null>(null);
     const [managingAppointment, setManagingAppointment] = useState<Appointment | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -78,13 +73,6 @@ export default function AdminDashboard() {
         }
     });
 
-    const { data: posts = [] } = useQuery<Post[]>({
-        queryKey: ['posts'],
-        queryFn: async () => {
-             const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
-             return (data || []) as Post[];
-        }
-    });
 
     const isDataLoading = isLoadingAppointments || isLoadingServices || isProfileLoading; // Combined loading state
 
@@ -92,7 +80,6 @@ export default function AdminDashboard() {
     const fetchData = async () => {
         queryClient.invalidateQueries({ queryKey: ['appointments'] });
         queryClient.invalidateQueries({ queryKey: ['services'] });
-        queryClient.invalidateQueries({ queryKey: ['posts'] });
         queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     };
 
@@ -162,27 +149,6 @@ export default function AdminDashboard() {
         }
     };
 
-    const handleSavePost = async (data: any) => {
-        if (!editingPost) return;
-        setIsLoading(true);
-
-        const postData = {
-            title: data.title,
-            content: data.content,
-            type: editingPost.type,
-            image_url: editingPost.image_url
-        };
-
-        const { error } = editingPost.id
-            ? await supabase.from('posts').update(postData).eq('id', editingPost.id)
-            : await supabase.from('posts').insert([postData]);
-
-        setIsLoading(false);
-        if (!error) {
-            setEditingPost(null);
-            fetchData(); // Background refresh
-        }
-    };
 
     const handleUpdateStatus = async (id: string, status: string) => {
         // Guard against double clicks
@@ -308,7 +274,7 @@ export default function AdminDashboard() {
         setIsLoading(false);
     };
 
-    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'service' | 'post') => {
+    const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'service') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -327,7 +293,6 @@ export default function AdminDashboard() {
                 .getPublicUrl(filePath);
 
             if (type === 'service') setEditingService({ ...editingService, image_url: publicUrl } as Service);
-            else setEditingPost({ ...editingPost, image_url: publicUrl } as Post);
         }
         setIsUploading(false);
     };
@@ -413,7 +378,6 @@ export default function AdminDashboard() {
                         <p className="text-muted-foreground italic">
                             {activeTab === 'Citas' && 'Gestiona todas las reservas de tus clientes.'}
                             {activeTab === 'Catálogo' && 'Personaliza tus servicios y precios.'}
-                            {activeTab === 'Posts' && 'Crea y gestiona tus historias y publicaciones.'}
                         </p>
                     </div>
 
@@ -428,7 +392,7 @@ export default function AdminDashboard() {
 
                 {/* Dynamic Content */}
                 <div className="relative">
-                    {(isLoading || isDataLoading) && !editingService && !editingPost && !managingAppointment && (
+                    {(isLoading || isDataLoading) && !editingService && !managingAppointment && (
                         <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-3xl">
                             <Loader2 className="animate-spin text-primary" size={32} />
                         </div>
@@ -475,12 +439,6 @@ export default function AdminDashboard() {
                         <StaffTab />
                     )}
 
-                    {activeTab === 'Posts' && (
-                        <PostsTab
-                            posts={posts}
-                            setEditingPost={setEditingPost}
-                        />
-                    )}
                 </div>
             </main>
 
@@ -499,19 +457,6 @@ export default function AdminDashboard() {
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {editingPost && (
-                    <PostModal
-                        post={editingPost}
-                        setPost={setEditingPost}
-                        onClose={() => setEditingPost(null)}
-                        onSave={handleSavePost}
-                        onUploadImage={(e) => handleUploadImage(e, 'post')}
-                        isLoading={isLoading}
-                        isUploading={isUploading}
-                    />
-                )}
-            </AnimatePresence>
 
             <AnimatePresence>
                 {managingAppointment && (
