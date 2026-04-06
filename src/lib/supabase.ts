@@ -17,9 +17,16 @@ const createSupabaseClient = () => {
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: true,
-                // @ts-ignore - lockTimeoutMs exists but might not be in the high-level types of this version
-                lockTimeoutMs: 30000, 
-            } as any
+                // In some versions of supabase-js/auth-js the property is lockAcquireTimeout
+                // @ts-ignore
+                lockAcquireTimeout: 30000,
+                // In others it is lockTimeoutMs (keeping for backward/forward compatibility)
+                // @ts-ignore
+                lockTimeoutMs: 30000,
+            } as any,
+            db: {
+                timeout: 30000
+            }
         }
     );
 };
