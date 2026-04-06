@@ -17,10 +17,18 @@ const createSupabaseClient = () => {
                 persistSession: true,
                 autoRefreshToken: true,
                 detectSessionInUrl: true,
-                // In some versions of supabase-js/auth-js the property is lockAcquireTimeout
+                // Custom lock implementation because supabase-js (wrapper) sometimes swallows 
+                // lockAcquireTimeout before passing it to auth-js (GoTrue).
+                // This custom lock uses the browser's LockManager but without the default 10s timeout.
+                lock: async (name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+                    if (typeof navigator !== 'undefined' && navigator.locks) {
+                        return await navigator.locks.request(name, fn);
+                    }
+                    return await fn();
+                },
+                // Keep these for future-proofing in case the wrapper is updated
                 // @ts-ignore
                 lockAcquireTimeout: 30000,
-                // In others it is lockTimeoutMs (keeping for backward/forward compatibility)
                 // @ts-ignore
                 lockTimeoutMs: 30000,
             } as any,
