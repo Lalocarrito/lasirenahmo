@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   email TEXT,
   phone TEXT,
-  role TEXT DEFAULT 'user' -- 'admin' or 'user'
+  role TEXT DEFAULT 'user' -- 'admin', 'staff', or 'user'
 );
 
 -- Services: The catalog of eyelash services
@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   customer_email TEXT,
   customer_phone TEXT NOT NULL,
   service_id UUID REFERENCES services(id),
+  staff_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   appointment_date DATE NOT NULL,
   appointment_time TEXT NOT NULL,
   status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'completed', 'cancelled'
@@ -49,7 +50,7 @@ INSERT INTO services (name, description, price, duration) VALUES
 ('Xtreme Volume', 'Mirada intensa y dramática para eventos especiales.', 850, '2.5h'),
 ('Híbridas', 'El equilibrio perfecto entre volumen y naturalidad.', 700, '2h'),
 ('Clásicas', 'Realce natural y elegante día a día.', 550, '1.5h')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- Storage Policies for Services Bucket
 DROP POLICY IF EXISTS "Cualquiera puede ver imágenes de servicios" ON storage.objects;
@@ -69,6 +70,39 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'services');
 
+-- RLS Policies for Profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins pueden ver todos los perfiles" ON profiles;
+CREATE POLICY "Admins pueden ver todos los perfiles"
+ON profiles FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+DROP POLICY IF EXISTS "Admins pueden actualizar perfiles" ON profiles;
+CREATE POLICY "Admins pueden actualizar perfiles"
+ON profiles FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+DROP POLICY IF EXISTS "Público puede ver perfiles de staff" ON profiles;
+CREATE POLICY "Público puede ver perfiles de staff"
+ON profiles FOR SELECT
+TO public
+USING (role = 'staff' OR role = 'admin');
+
 -- RLS Policies for Appointments
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 
@@ -78,15 +112,15 @@ ON appointments FOR INSERT
 TO public
 WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Admins pueden ver todas las citas" ON appointments;
-CREATE POLICY "Admins pueden ver todas las citas"
+DROP POLICY IF EXISTS "Staff y Admins pueden ver citas" ON appointments;
+CREATE POLICY "Staff y Admins pueden ver citas"
 ON appointments FOR SELECT
 TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM profiles
     WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
+    AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND appointments.staff_id = auth.uid()))
   )
 );
 
@@ -113,9 +147,20 @@ CREATE TABLE IF NOT EXISTS business_availability (
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
   is_active BOOLEAN DEFAULT true,
-  UNIQUE(day_of_week, start_time, end_time)
+  staff_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  UNIQUE(day_of_week, start_time, end_time, staff_id)
 );
 
+-- Availability Overrides
+CREATE TABLE IF NOT EXISTS business_availability_overrides (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  override_date DATE NOT NULL,
+  start_time TIME,
+  end_time TIME,
+  is_off_day BOOLEAN DEFAULT false,
+  staff_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
 -- Business Settings: General configurations
 CREATE TABLE IF NOT EXISTS business_settings (
@@ -126,6 +171,7 @@ CREATE TABLE IF NOT EXISTS business_settings (
 
 -- RLS Policies for new tables
 ALTER TABLE business_availability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_availability_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Cualquiera puede ver disponibilidad" ON business_availability;
@@ -135,9 +181,15 @@ DROP POLICY IF EXISTS "Cualquiera puede ver configuración pública" ON business
 CREATE POLICY "Cualquiera puede ver configuración pública" ON business_settings FOR SELECT TO public USING (true);
 
 -- Admin policies
-DROP POLICY IF EXISTS "Admins pueden todo en disponibilidad" ON business_availability;
-CREATE POLICY "Admins pueden todo en disponibilidad" ON business_availability FOR ALL TO authenticated USING (
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+DROP POLICY IF EXISTS "Admins y Staff pueden todo en su disponibilidad" ON business_availability;
+CREATE POLICY "Admins y Staff pueden todo en su disponibilidad" 
+ON business_availability FOR ALL TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() 
+    AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND business_availability.staff_id = auth.uid()))
+  )
 );
 
 DROP POLICY IF EXISTS "Admins pueden todo en configuración" ON business_settings;
@@ -145,31 +197,21 @@ CREATE POLICY "Admins pueden todo en configuración" ON business_settings FOR AL
   EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
 );
 
--- Seed default availability (Split shifts example)
-INSERT INTO business_availability (day_of_week, start_time, end_time) VALUES
-(1, '10:00', '14:00'), (1, '16:00', '20:00'), -- Lunes Turno partido
-(2, '10:00', '18:00'),
-(3, '10:00', '18:00'),
-(4, '10:00', '18:00'),
-(5, '10:00', '18:00')
-ON CONFLICT (day_of_week, start_time, end_time) DO NOTHING;
-
 -- Seed default settings
 INSERT INTO business_settings (key, value) VALUES
 ('emergency_reminder_template', '{"message": "¡Hola! Te recordamos tu cita de hoy en La Sirena. ¿Confirmas tu asistencia?"}')
 ON CONFLICT (key) DO NOTHING;
 
--- Script para agregar restricción de unicidad en fecha y hora a las citas
+-- Constraints for Appointments
 ALTER TABLE appointments DROP CONSTRAINT IF EXISTS no_double_booking;
-ALTER TABLE appointments ADD CONSTRAINT no_double_booking UNIQUE (appointment_date, appointment_time);
+ALTER TABLE appointments ADD CONSTRAINT no_double_booking UNIQUE (appointment_date, appointment_time, staff_id);
 
--- Function to check for spam before inserting a new appointment
+-- Function to check for spam
 CREATE OR REPLACE FUNCTION check_appointment_spam()
 RETURNS TRIGGER AS $$
 DECLARE
   recent_pending_count INTEGER;
 BEGIN
-  -- Only check if the incoming status is 'pending' (the default for user bookings)
   IF NEW.status = 'pending' THEN
     SELECT COUNT(*) INTO recent_pending_count
     FROM appointments
@@ -181,19 +223,15 @@ BEGIN
         (NEW.customer_phone IS NOT NULL AND customer_phone = NEW.customer_phone)
       );
 
-    -- If there are 3 or more pending appointments in the last 24 hours, block it.
     IF recent_pending_count >= 3 THEN
       RAISE EXCEPTION 'Has excedido el límite de citas pendientes (máx 3/día). Por favor, contacta soporte.';
     END IF;
   END IF;
-
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to execute the function before insert
 DROP TRIGGER IF EXISTS prevent_appointment_spam ON appointments;
-
 CREATE TRIGGER prevent_appointment_spam
 BEFORE INSERT ON appointments
 FOR EACH ROW EXECUTE FUNCTION check_appointment_spam();

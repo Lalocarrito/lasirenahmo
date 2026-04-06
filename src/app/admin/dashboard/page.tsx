@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-import { Appointment, Service, Post, BusinessAvailability, BusinessAvailabilityOverride } from '@/types';
+import { Appointment, Service, Post, BusinessAvailability, BusinessAvailabilityOverride, Profile } from '@/types';
 
 import OverviewTab from '@/components/admin/tabs/OverviewTab';
 import AppointmentsTab from '@/components/admin/tabs/AppointmentsTab';
@@ -34,6 +34,7 @@ import ServiceModal from '@/components/admin/modals/ServiceModal';
 import PostModal from '@/components/admin/modals/PostModal';
 import ManageAppointmentModal from '@/components/admin/modals/ManageAppointmentModal';
 import ClientsTab from '@/components/admin/tabs/ClientsTab';
+import StaffTab from '@/components/admin/tabs/StaffTab';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
@@ -42,6 +43,7 @@ const TABS = [
     { name: 'Citas', icon: Calendar },
     { name: 'Clientes', icon: Users },
     { name: 'Catálogo', icon: List },
+    { name: 'Equipo', icon: Users },
     { name: 'Disponibilidad', icon: Settings },
     { name: 'Posts', icon: ImageIcon },
 ];
@@ -53,6 +55,8 @@ export default function AdminDashboard() {
     const [managingAppointment, setManagingAppointment] = useState<Appointment | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [isProfileLoading, setIsProfileLoading] = useState(true);
 
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
@@ -82,37 +86,35 @@ export default function AdminDashboard() {
         }
     });
 
-    const { data: availability = [] } = useQuery<BusinessAvailability[]>({
-        queryKey: ['availability'],
-        queryFn: async () => {
-             const { data } = await supabase.from('business_availability').select('*').order('day_of_week', { ascending: true });
-             return (data || []) as BusinessAvailability[];
-        }
-    });
-
-    const { data: overrides = [] } = useQuery<BusinessAvailabilityOverride[]>({
-        queryKey: ['overrides'],
-        queryFn: async () => {
-             const { data } = await supabase.from('business_availability_overrides').select('*').order('override_date', { ascending: true });
-             return (data || []) as BusinessAvailabilityOverride[];
-        }
-    });
-
-    const isDataLoading = isLoadingAppointments || isLoadingServices; // Combined loading state
+    const isDataLoading = isLoadingAppointments || isLoadingServices || isProfileLoading; // Combined loading state
 
     // Function to invalidate queries manually when needed
     const fetchData = async () => {
         queryClient.invalidateQueries({ queryKey: ['appointments'] });
         queryClient.invalidateQueries({ queryKey: ['services'] });
         queryClient.invalidateQueries({ queryKey: ['posts'] });
-        queryClient.invalidateQueries({ queryKey: ['availability'] });
-        queryClient.invalidateQueries({ queryKey: ['overrides'] });
+        queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
     };
 
     useEffect(() => {
         setMounted(true);
-        const sub = supabase.auth.onAuthStateChange((event) => {
+        const sub = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_OUT') window.location.href = '/admin';
+            if (session?.user) {
+                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                setProfile(data as Profile);
+                setIsProfileLoading(false);
+            } else {
+                setIsProfileLoading(false);
+            }
+        });
+        
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user) {
+                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                setProfile(data as Profile);
+            }
+            setIsProfileLoading(false);
         });
 
         // Setup real-time subscription for appointments
@@ -240,7 +242,7 @@ export default function AdminDashboard() {
     const handleAddAvailability = async (dayOfWeek: number) => {
         // Optimistic insert
         const tempId = `temp-${Date.now()}`;
-        const newAvail = { id: tempId, day_of_week: dayOfWeek, start_time: '09:00', end_time: '18:00', is_active: true };
+        const newAvail = { id: tempId, day_of_week: dayOfWeek, start_time: '09:00', end_time: '18:00', is_active: true, staff_id: profile?.id };
 
         queryClient.setQueryData(['availability'], (old: BusinessAvailability[] | undefined) => {
             if (!old) return [newAvail];
@@ -248,7 +250,7 @@ export default function AdminDashboard() {
         });
 
         const { error } = await supabase.from('business_availability')
-            .insert([{ day_of_week: dayOfWeek, start_time: '09:00', end_time: '18:00' }]);
+            .insert([{ day_of_week: dayOfWeek, start_time: '09:00', end_time: '18:00', staff_id: profile?.id }]);
 
         if (error) {
             queryClient.invalidateQueries({ queryKey: ['availability'] });
@@ -285,7 +287,8 @@ export default function AdminDashboard() {
                 override_date: date,
                 start_time: startTime,
                 end_time: endTime,
-                is_off_day: isOffDay
+                is_off_day: isOffDay,
+                staff_id: profile?.id
             }]);
 
             if (error) {
@@ -365,7 +368,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
-                    {TABS.map((tab) => (
+                    {TABS.filter(t => profile?.role === 'staff' ? ['Overview', 'Citas', 'Disponibilidad'].includes(t.name) : true).map((tab) => (
                         <button
                             key={tab.name}
                             onClick={() => setActiveTab(tab.name)}
@@ -450,7 +453,6 @@ export default function AdminDashboard() {
                         <AppointmentsTab
                             appointments={appointments}
                             services={services}
-                            availability={availability}
                             setManagingAppointment={setManagingAppointment}
                             handleUpdateStatus={handleUpdateStatus}
                             fetchData={fetchData}
@@ -465,15 +467,12 @@ export default function AdminDashboard() {
 
                     {activeTab === 'Disponibilidad' && (
                         <AvailabilityTab
-                            availability={availability}
-                            overrides={overrides}
-                            handleUpdateAvailability={handleUpdateAvailability}
-                            handleAddAvailability={handleAddAvailability}
-                            handleDeleteAvailability={handleDeleteAvailability}
-                            handleUpdateOverride={handleUpdateOverride}
-                            handleDeleteOverride={handleDeleteOverride}
-                            fetchData={fetchData}
+                            profile={profile}
                         />
+                    )}
+
+                    {activeTab === 'Equipo' && (
+                        <StaffTab />
                     )}
 
                     {activeTab === 'Posts' && (

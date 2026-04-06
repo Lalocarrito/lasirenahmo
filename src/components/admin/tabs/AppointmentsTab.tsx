@@ -13,7 +13,6 @@ import ConfirmModal from '../modals/ConfirmModal';
 interface AppointmentsTabProps {
     appointments: any[];
     services: any[];
-    availability: any[];
     setManagingAppointment: (appointment: any) => void;
     handleUpdateStatus: (id: string, status: string) => void;
     fetchData: (loader?: boolean) => void;
@@ -22,7 +21,6 @@ interface AppointmentsTabProps {
 export default function AppointmentsTab({
     appointments,
     services,
-    availability,
     setManagingAppointment,
     handleUpdateStatus,
     fetchData

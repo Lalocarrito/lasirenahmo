@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 
 // Steps
 import ServiceSelection from './booking/steps/ServiceSelection';
+import StaffSelection from './booking/steps/StaffSelection';
 import DateSelection from './booking/steps/DateSelection';
 import AuthOrGuest from './booking/steps/AuthOrGuest';
 import BookingSummary from './booking/steps/BookingSummary';
@@ -45,12 +46,12 @@ function BookingFlowContent() {
             {/* Header & Step Indicator */}
             <div className="flex justify-between items-center mb-12">
                 <div className="flex gap-2">
-                    {[1, 2, 4, 5, 3].map((i, idx) => (
+                    {[1, 2, 3, 4, 5, 6].map((i, idx) => (
                         <div
                             key={i}
                             className={cn(
                                 "h-1.5 rounded-full transition-all duration-700",
-                                step === i ? "w-12 bg-primary" : (idx < [1, 2, 4, 5, 3].indexOf(step) ? "w-4 bg-primary/40" : "w-4 bg-muted")
+                                step === i ? "w-12 bg-primary" : (idx < [1, 2, 3, 4, 5, 6].indexOf(step) ? "w-4 bg-primary/40" : "w-4 bg-muted")
                             )}
                         />
                     ))}
@@ -80,9 +81,10 @@ function BookingFlowContent() {
             <div id="booking-step-content">
                 <AnimatePresence mode="wait">
                     {step === 1 && <ServiceSelection />}
-                    {step === 2 && <DateSelection />}
+                    {step === 2 && <StaffSelection />}
+                    {step === 3 && <DateSelection />}
                     {step === 4 && <AuthOrGuest />}
-                    {(step === 5 || step === 3) && <BookingSummary />}
+                    {(step === 5 || step === 6) && <BookingSummary />}
                 </AnimatePresence>
             </div>
 

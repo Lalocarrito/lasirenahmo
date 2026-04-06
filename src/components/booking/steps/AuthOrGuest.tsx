@@ -69,7 +69,7 @@ export default function AuthOrGuest() {
                     });
 
                     if (!bookingError) {
-                        setStep(3);
+                        setStep(6);
                     } else {
                         console.error("DEBUG - Error al guardar cita tras login:", bookingError);
                         setToast({ message: `Error al guardar cita (${bookingError.code}): ${bookingError.message}`, type: 'error' });
@@ -152,7 +152,7 @@ export default function AuthOrGuest() {
                     Entrar con Google
                 </button>
             </div>
-            <button onClick={() => setStep(2)} className="w-full mt-8 text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-all">← Volver al calendario</button>
+            <button onClick={() => setStep(3)} className="w-full mt-8 text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-all">← Volver al calendario</button>
         </motion.div>
     );
 }

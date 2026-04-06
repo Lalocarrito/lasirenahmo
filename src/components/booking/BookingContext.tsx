@@ -13,6 +13,8 @@ interface BookingContextType {
 
     selectedService: Service | null;
     setSelectedService: (service: Service | null) => void;
+    selectedStaff: Profile | null;
+    setSelectedStaff: (staff: Profile | null) => void;
     selectedDate: Date | null;
     setSelectedDate: (date: Date | null) => void;
     selectedTime: string;
@@ -41,6 +43,7 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children, initialStep = 1 }: { children: ReactNode, initialStep?: number }) {
     const [step, setStep] = useState(initialStep);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
+    const [selectedStaff, setSelectedStaff] = useState<Profile | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [notes, setNotes] = useState('');
@@ -87,12 +90,13 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const prevStep = () => setStep(prev => prev - 1);
 
     const createAppointment = async () => {
-        if (!selectedService || !selectedDate || !selectedTime || !user) return false;
+        if (!selectedService || !selectedStaff || !selectedDate || !selectedTime || !user) return false;
 
         const appointmentDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
         const { error } = await supabase.from('appointments').insert({
             service_id: selectedService.id,
+            staff_id: selectedStaff.id,
             customer_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
             customer_email: user.email,
             customer_phone: user.user_metadata?.phone || '',
@@ -120,6 +124,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             value={{
                 step, setStep, nextStep, prevStep,
                 selectedService, setSelectedService,
+                selectedStaff, setSelectedStaff,
                 selectedDate, setSelectedDate,
                 selectedTime, setSelectedTime,
                 notes, setNotes,

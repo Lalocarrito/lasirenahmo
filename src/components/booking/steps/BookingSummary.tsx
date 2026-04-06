@@ -12,7 +12,7 @@ const playfair = Playfair_Display({ subsets: ['latin'] });
 export default function BookingSummary() {
     const {
         step, setStep,
-        selectedService, selectedDate, selectedTime,
+        selectedService, selectedStaff, selectedDate, selectedTime,
         notes, setNotes,
         user,
         createAppointment,
@@ -20,7 +20,7 @@ export default function BookingSummary() {
     } = useBooking();
     const [honeypot, setHoneypot] = useState('');
 
-    if (step === 3) {
+    if (step === 6) {
         return (
             <motion.div
                 key="success"
@@ -93,6 +93,10 @@ export default function BookingSummary() {
             <div className="siren-card !p-8 shadow-3xl space-y-8">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Profesional</span>
+                        <p className="font-bold text-lg leading-tight">{selectedStaff?.full_name || 'Agendado'}</p>
+                    </div>
+                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Servicio</span>
                         <p className="font-bold text-primary text-lg leading-tight">{selectedService?.name}</p>
                     </div>
@@ -141,13 +145,13 @@ export default function BookingSummary() {
                         if (honeypot.trim() !== '') {
                             // Fake success after short delay to trick bots
                             await new Promise(r => setTimeout(r, 800));
-                            setStep(3);
+                            setStep(6);
                             setIsSubmitting(false);
                             return;
                         }
 
                         const success = await createAppointment();
-                        if (success) setStep(3); // Go to success step (3)
+                        if (success) setStep(6); // Go to success step (6)
                         setIsSubmitting(false);
                     }}
                     disabled={isSubmitting}
@@ -156,7 +160,7 @@ export default function BookingSummary() {
                     {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Confirmar y Reservar'}
                 </button>
 
-                <button onClick={() => setStep(2)} className="w-full text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-colors">Volver a editar fecha/hora</button>
+                <button onClick={() => setStep(3)} className="w-full text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-colors">Volver a editar fecha/hora</button>
             </div>
         </motion.div>
     );

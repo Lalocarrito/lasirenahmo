@@ -15,6 +15,7 @@ export default function DateSelection() {
     const {
         selectedDate, setSelectedDate,
         selectedTime, setSelectedTime,
+        selectedStaff,
         user, setStep, prevStep
     } = useBooking();
 
@@ -24,28 +25,48 @@ export default function DateSelection() {
 
     useEffect(() => {
         const fetchAvailability = async () => {
+            let availQuery = supabase.from('business_availability').select('*');
+            let overrideQuery = supabase.from('business_availability_overrides').select('*');
+
+            if (selectedStaff) {
+                availQuery = availQuery.eq('staff_id', selectedStaff.id);
+                overrideQuery = overrideQuery.eq('staff_id', selectedStaff.id);
+            }
+
             const [availRes, overridesRes] = await Promise.all([
-                supabase.from('business_availability').select('*'),
-                supabase.from('business_availability_overrides').select('*')
+                availQuery,
+                overrideQuery
             ]);
+            
+            // If they have no specific schedules configured, maybe they inherit global?
+            // For now let's strict to their schedule.
             setBusinessAvailability(availRes.data || []);
             setOverrides(overridesRes.data || []);
         };
         fetchAvailability();
-    }, []);
+    }, [selectedStaff]);
 
     useEffect(() => {
-        if (!selectedDate || businessAvailability.length === 0) return;
+        if (!selectedDate || businessAvailability.length === 0) {
+            setAvailableSlots([]);
+            return;
+        }
 
         const calculateSlots = async () => {
             const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
-            // 1. Fetch existing appointments for this date
-            const { data: existingAppts } = await supabase
+            // 1. Fetch existing appointments for this date and staff
+            let apptQuery = supabase
                 .from('appointments')
                 .select('appointment_time')
                 .eq('appointment_date', dateStr)
-                .neq('status', 'cancelled'); // Exclude cancelled appointments
+                .neq('status', 'cancelled');
+
+            if (selectedStaff) {
+                apptQuery = apptQuery.eq('staff_id', selectedStaff.id);
+            }
+
+            const { data: existingAppts } = await apptQuery;
 
             const bookedTimes = (existingAppts || []).map(a => a.appointment_time);
 
