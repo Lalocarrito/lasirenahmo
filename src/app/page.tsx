@@ -167,7 +167,11 @@ export default function Home() {
 
       <footer className="py-20 text-center border-t border-primary/10 bg-card/20 backdrop-blur-md">
         <div className={`${playfair.className} text-2xl text-primary mb-4`}>La Sirena</div>
-        <p className="text-muted-foreground text-sm">© 2024 La Sirena. Todos los derechos reservados.</p>
+        <p className="text-muted-foreground text-sm mb-6">© 2024 La Sirena. Todos los derechos reservados.</p>
+        <div className="flex justify-center gap-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
+          <Link href="/privacy" className="hover:text-primary transition-colors">Política de Privacidad</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">Términos del Servicio</Link>
+        </div>
       </footer>
     </main>
   );

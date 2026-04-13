@@ -13,10 +13,17 @@ const playfair = Playfair_Display({ subsets: ['latin'] });
 export default function AuthOrGuest() {
     const {
         setStep,
-        setUser,
+        user, setUser,
         setToast,
         selectedService, selectedTime, notes,
     } = useBooking();
+
+    // Auto-advance if user logged in (e.g. after Google redirect)
+    useState(() => {
+        if (user) {
+            setStep(5);
+        }
+    });
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

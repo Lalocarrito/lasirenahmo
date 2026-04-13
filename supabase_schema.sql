@@ -170,12 +170,37 @@ CREATE TABLE IF NOT EXISTS business_settings (
 );
 
 -- RLS Policies for new tables
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_availability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_availability_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
 
+-- Services Policies
+DROP POLICY IF EXISTS "Público puede ver servicios" ON services;
+CREATE POLICY "Público puede ver servicios" ON services FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Solo admins pueden modificar servicios" ON services;
+CREATE POLICY "Solo admins pueden modificar servicios" ON services FOR ALL TO authenticated 
+USING (
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);
+
+-- Posts Policies
+DROP POLICY IF EXISTS "Público puede ver posts" ON posts;
+CREATE POLICY "Público puede ver posts" ON posts FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Solo admins pueden modificar posts" ON posts;
+CREATE POLICY "Solo admins pueden modificar posts" ON posts FOR ALL TO authenticated 
+USING (
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);
+
 DROP POLICY IF EXISTS "Cualquiera puede ver disponibilidad" ON business_availability;
 CREATE POLICY "Cualquiera puede ver disponibilidad" ON business_availability FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Cualquiera puede ver excepciones de horario" ON business_availability_overrides;
+CREATE POLICY "Cualquiera puede ver excepciones de horario" ON business_availability_overrides FOR SELECT TO public USING (true);
 
 DROP POLICY IF EXISTS "Cualquiera puede ver configuración pública" ON business_settings;
 CREATE POLICY "Cualquiera puede ver configuración pública" ON business_settings FOR SELECT TO public USING (true);
@@ -189,6 +214,17 @@ USING (
     SELECT 1 FROM profiles 
     WHERE profiles.id = auth.uid() 
     AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND business_availability.staff_id = auth.uid()))
+  )
+);
+
+DROP POLICY IF EXISTS "Admins y Staff pueden todo en sus excepciones" ON business_availability_overrides;
+CREATE POLICY "Admins y Staff pueden todo en sus excepciones" 
+ON business_availability_overrides FOR ALL TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() 
+    AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND business_availability_overrides.staff_id = auth.uid()))
   )
 );
 

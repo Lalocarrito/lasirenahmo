@@ -33,7 +33,7 @@ interface BookingContextType {
     toast: { message: string, type: 'error' | 'success' } | null;
     setToast: (toast: { message: string, type: 'error' | 'success' } | null) => void;
 
-    createAppointment: () => Promise<boolean>;
+    createAppointment: (extraData?: { phone?: string }) => Promise<boolean>;
     isSubmitting: boolean;
     setIsSubmitting: (val: boolean) => void;
 }
@@ -58,6 +58,42 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             return () => clearTimeout(timer);
         }
     }, [toast]);
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('la-sirena-booking-state');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Only load if not too old (e.g., 2 hours)
+                const timestamp = parsed._timestamp || 0;
+                if (Date.now() - timestamp < 1000 * 60 * 60 * 2) {
+                    if (parsed.step) setStep(parsed.step);
+                    if (parsed.selectedService) setSelectedService(parsed.selectedService);
+                    if (parsed.selectedStaff) setSelectedStaff(parsed.selectedStaff);
+                    if (parsed.selectedDate) setSelectedDate(new Date(parsed.selectedDate));
+                    if (parsed.selectedTime) setSelectedTime(parsed.selectedTime);
+                    if (parsed.notes) setNotes(parsed.notes);
+                }
+            } catch (e) {
+                console.error("Error loading booking state:", e);
+            }
+        }
+    }, []);
+
+    // Save to localStorage on changes
+    useEffect(() => {
+        const state = {
+            step,
+            selectedService,
+            selectedStaff,
+            selectedDate: selectedDate?.toISOString(),
+            selectedTime,
+            notes,
+            _timestamp: Date.now()
+        };
+        localStorage.setItem('la-sirena-booking-state', JSON.stringify(state));
+    }, [step, selectedService, selectedStaff, selectedDate, selectedTime, notes]);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -89,22 +125,29 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
 
-    const createAppointment = async () => {
+    const createAppointment = async (extraData?: { phone?: string }) => {
         if (!selectedService || !selectedStaff || !selectedDate || !selectedTime || !user) return false;
 
         const appointmentDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+
+        const customerPhone = extraData?.phone || user.user_metadata?.phone || '';
 
         const { error } = await supabase.from('appointments').insert({
             service_id: selectedService.id,
             staff_id: selectedStaff.id,
             customer_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
             customer_email: user.email,
-            customer_phone: user.user_metadata?.phone || '',
+            customer_phone: customerPhone,
             appointment_date: appointmentDateStr,
             appointment_time: selectedTime,
             notes: notes,
             status: 'pending'
         });
+
+        if (!error && extraData?.phone) {
+            // Update profile with the new phone if provided
+            await supabase.from('profiles').update({ phone: extraData.phone }).eq('id', user.id);
+        }
 
         setIsSubmitting(false);
         if (error) {

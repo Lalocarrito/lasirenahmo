@@ -19,6 +19,8 @@ export default function BookingSummary() {
         isSubmitting, setIsSubmitting
     } = useBooking();
     const [honeypot, setHoneypot] = useState('');
+    const [phone, setPhone] = useState('');
+    const needsPhone = user && !user.user_metadata?.phone;
 
     if (step === 6) {
         return (
@@ -124,6 +126,25 @@ export default function BookingSummary() {
                     />
                 </div>
 
+                {needsPhone && (
+                    <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-2 py-4"
+                    >
+                        <label className="text-[10px] uppercase font-bold text-primary tracking-widest ml-1">Número de Teléfono (Requerido)</label>
+                        <input
+                            type="tel"
+                            required
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="w-full p-4 rounded-2xl bg-primary/5 border border-primary/20 focus:border-primary transition-all outline-none text-sm font-bold"
+                            placeholder="662 XXX XXXX"
+                        />
+                        <p className="text-[9px] text-muted-foreground italic ml-1">Lo necesitamos para enviarte recordatorios de tu cita.</p>
+                    </motion.div>
+                )}
+
                 {/* Honeypot anti-spam field */}
                 <div className="absolute opacity-0 -z-10 w-0 h-0 overflow-hidden" aria-hidden="true">
                     <label htmlFor="website">Página Web</label>
@@ -140,6 +161,11 @@ export default function BookingSummary() {
 
                 <button
                     onClick={async () => {
+                        if (needsPhone && !phone) {
+                            alert("Por favor, ingresa tu número de teléfono.");
+                            return;
+                        }
+
                         setIsSubmitting(true);
                         // Anti-spam check
                         if (honeypot.trim() !== '') {
@@ -150,7 +176,7 @@ export default function BookingSummary() {
                             return;
                         }
 
-                        const success = await createAppointment();
+                        const success = await createAppointment({ phone: needsPhone ? phone : undefined });
                         if (success) setStep(6); // Go to success step (6)
                         setIsSubmitting(false);
                     }}
