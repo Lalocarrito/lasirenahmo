@@ -19,101 +19,105 @@ export default function OverviewTab({ appointments, setManagingAppointment, setA
     const todaysAppointments = appointments.filter(apt => apt.appointment_date === todayStr);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-            {/* Timeline / Visual Schedule */}
-            <div className="lg:col-span-2 space-y-6">
-                <div className="admin-card !p-0 overflow-hidden">
-                    <div className="p-6 border-b border-border">
-                        <h3 className="font-bold flex items-center gap-2">
-                            <Calendar size={18} className="text-primary" />
-                            Próximas horas
-                        </h3>
-                    </div>
-                    <div className="p-6 space-y-8 relative">
-                        {/* Vertical line connector */}
-                        <div className="absolute left-10 top-10 bottom-10 w-0.5 bg-border md:left-14" />
-
-                        {todaysAppointments.length > 0 ? todaysAppointments.map((apt) => (
-                            <div key={apt.id} className="flex gap-4 md:gap-8 relative z-10 group">
-                                <div className="flex flex-col items-center w-8 md:w-16">
-                                    <div className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase">{apt.appointment_time}</div>
-                                    <div className="w-4 h-4 rounded-full bg-primary border-4 border-card mt-2 group-hover:scale-125 transition-transform" />
-                                </div>
-                                <div className="flex-1 admin-card !p-4 hover:border-primary/50 transition-colors shadow-none bg-primary/5">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h4 className="font-bold text-lg leading-tight">{apt.customer_name}</h4>
-                                            <p className="text-primary dark:text-pink-300 text-xs font-bold uppercase tracking-tighter">
-                                                {apt.services?.name || 'Servicio General'}
-                                            </p>
-                                        </div>
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
-                                            apt.status === 'confirmed' ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
-                                        )}>
-                                            {apt.status === 'confirmed' ? '✓' : '...'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-4">
-                                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-bold">
-                                            <Users size={12} /> {apt.customer_phone}
-                                        </span>
-                                        <button
-                                            onClick={() => setManagingAppointment(apt)}
-                                            className="text-[10px] text-primary dark:text-pink-300 font-bold uppercase hover:underline"
-                                        >
-                                            Gestionar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="py-20 text-center space-y-4">
-                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary dark:text-pink-400">
-                                    <Calendar size={32} />
-                                </div>
-                                <p className="text-muted-foreground">No hay citas para hoy todavía.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Quick Stats & Actions */}
-            <div className="space-y-6">
-                <div className="admin-card bg-primary text-white border-none shadow-primary/20 shadow-lg">
-                    <h3 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-6">Resumen del Día</h3>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                            <span className="text-xs">Citas Totales</span>
-                            <span className="text-6xl font-bold">{todaysAppointments.length}</span>
-                        </div>
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Quick Stats Banner */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2 admin-card bg-gradient-to-br from-primary to-primary/80 text-white border-none shadow-primary/30 shadow-xl overflow-hidden relative">
+                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+                    <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-black/10 rounded-full blur-2xl" />
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <h3 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-2">Resumen de Hoy</h3>
                         <div className="flex justify-between items-end">
-                            <span className="text-xs">Por confirmar</span>
-                            <span className="text-5xl font-bold">{todaysAppointments.filter(a => a.status === 'pending').length}</span>
+                            <div>
+                                <span className="text-sm opacity-90 block mb-1">Citas Totales</span>
+                                <span className="text-6xl font-black tracking-tighter">{todaysAppointments.length}</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-sm opacity-90 block mb-1">Por confirmar</span>
+                                <span className="text-4xl font-bold">{todaysAppointments.filter(a => a.status === 'pending').length}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="admin-card">
-                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-4">Acciones Rápidas</h3>
+                <div className="admin-card flex flex-col justify-center space-y-3 relative overflow-hidden bg-gradient-to-b from-card to-muted/20">
+                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-1">Acciones Rápidas</h3>
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={() => setActiveTab('Citas')}
-                            className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-primary/5 border border-primary/10 hover:bg-primary/10 hover:text-primary dark:hover:text-pink-300 transition-all text-sm font-bold"
+                            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold"
                         >
-                            <Calendar size={20} />
+                            <Calendar size={18} />
                             <span>Nueva Cita</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('Catálogo')}
-                            className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover:bg-accent/10 hover:text-accent dark:hover:text-yellow-300 transition-all text-sm font-bold"
+                            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-primary/5 text-primary/70 hover:bg-primary/20 transition-all text-xs font-bold"
                         >
-                            <Users size={20} />
+                            <Users size={18} />
                             <span>Servicios</span>
                         </button>
                     </div>
                 </div>
+            </div>
+
+            {/* Horizontal Timeline / Visual Schedule */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-3 px-1">
+                    <Calendar size={20} className="text-primary" />
+                    <h3 className="font-bold text-lg">Próximas horas</h3>
+                </div>
+                
+                {todaysAppointments.length > 0 ? (
+                    <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                        {todaysAppointments.map((apt) => (
+                            <div key={apt.id} className="min-w-[280px] md:min-w-[320px] snap-center">
+                                <div className="admin-card h-full !p-5 hover:border-primary/40 transition-all flex flex-col justify-between bg-card hover:shadow-xl hover:shadow-primary/5 group relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-[100px] -z-10 group-hover:scale-110 transition-transform" />
+                                    
+                                    <div>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-1.5 text-primary text-sm font-black bg-primary/10 px-3 py-1 rounded-xl">
+                                                {apt.appointment_time}
+                                            </div>
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-full text-[10px] uppercase font-bold",
+                                                apt.status === 'confirmed' ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
+                                            )}>
+                                                {apt.status === 'confirmed' ? 'Confirmada' : 'Pendiente'}
+                                            </span>
+                                        </div>
+
+                                        <h4 className="font-bold text-xl leading-tight mb-1">{apt.customer_name}</h4>
+                                        <p className="text-xs text-muted-foreground font-medium mb-4 flex items-center gap-1">
+                                            <Users size={12} /> {apt.customer_phone || 'Sin teléfono'}
+                                        </p>
+
+                                        <div className="bg-muted/30 p-3 rounded-xl mb-4 border border-border/50">
+                                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider mb-1">Servicio</p>
+                                            <p className="font-medium text-sm">{apt.services?.name || 'Servicio General'}</p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setManagingAppointment(apt)}
+                                        className="w-full py-2.5 bg-primary/10 hover:bg-primary/20 text-primary dark:text-pink-300 rounded-xl text-xs font-bold uppercase transition-all mt-auto"
+                                    >
+                                        Gestionar Cita
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-16 text-center space-y-4 bg-card rounded-3xl border border-border">
+                        <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto text-primary/40">
+                            <Calendar size={32} />
+                        </div>
+                        <p className="text-muted-foreground font-medium">No hay citas para hoy todavía.</p>
+                        <p className="text-sm opacity-50">¡Aprovecha el tiempo para descansar!</p>
+                    </div>
+                )}
             </div>
         </div>
     );

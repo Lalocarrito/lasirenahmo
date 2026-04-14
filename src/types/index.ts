@@ -4,6 +4,7 @@ export interface Profile {
   email?: string;
   phone?: string;
   role: 'admin' | 'staff' | 'user';
+  avatar_url?: string;
 }
 
 export interface Service {

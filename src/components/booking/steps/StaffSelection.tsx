@@ -63,8 +63,12 @@ export default function StaffSelection() {
                                     : "border-border hover:border-primary/50 hover:bg-muted/50 bg-card"
                             )}
                         >
-                            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0">
-                                <User size={24} />
+                            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0 overflow-hidden border border-primary/20">
+                                {staff.avatar_url ? (
+                                    <img src={staff.avatar_url} alt={staff.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <User size={24} />
+                                )}
                             </div>
                             <div>
                                 <h3 className={cn("text-xl text-foreground", playfair.className)}>{staff.full_name || 'Lashista'}</h3>

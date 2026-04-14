@@ -33,119 +33,133 @@ export default function ManageAppointmentModal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/60 backdrop-blur-md"
             />
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="relative bg-card w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-border"
+                className="relative bg-background w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-border flex flex-col max-h-[90vh]"
             >
-                <div className="p-6 border-b border-border flex justify-between items-center bg-primary/5">
-                    <div>
-                        <h2 className={`${playfair.className} text-xl uppercase tracking-tight`}>Gestionar Cita</h2>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase mt-1">ID: {appointment.id.slice(0, 8)}</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-primary/10 hover:text-primary rounded-full transition-colors">
-                        <X size={20} />
+                {/* Header Section with gradient background */}
+                <div className="p-6 pb-8 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border-b border-border relative">
+                    <button 
+                        onClick={onClose} 
+                        className="absolute top-4 right-4 p-2 bg-background/50 backdrop-blur-sm hover:bg-background text-foreground rounded-full transition-colors z-10"
+                    >
+                        <X size={18} />
                     </button>
+                    
+                    <div className="flex flex-col items-center text-center mt-2">
+                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-3 shadow-inner">
+                            <Users size={32} />
+                        </div>
+                        <h2 className={`${playfair.className} text-2xl font-bold`}>{appointment.customer_name}</h2>
+                        <a href={`tel:${appointment.customer_phone}`} className="text-sm text-primary font-bold hover:underline mt-1 bg-primary/10 px-3 py-1 rounded-full">
+                            {appointment.customer_phone || 'Sin teléfono'}
+                        </a>
+                    </div>
                 </div>
 
-                <div className="p-6 space-y-6">
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-start">
+                <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                    {/* Appointment Details Card */}
+                    <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3">
+                            <span className={cn(
+                                "px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest",
+                                appointment.status === 'confirmed' ? "bg-green-500/10 text-green-500" :
+                                    appointment.status === 'cancelled' ? "bg-red-500/10 text-red-500" :
+                                        appointment.status === 'completed' ? "bg-blue-500/10 text-blue-500" :
+                                            "bg-yellow-500/10 text-yellow-500"
+                            )}>
+                                {appointment.status === 'confirmed' ? 'Confirmada' :
+                                    appointment.status === 'cancelled' ? 'Cancelada' :
+                                        appointment.status === 'completed' ? 'Completada' : 'Pendiente'}
+                            </span>
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Servicio</p>
+                            <p className="font-bold text-lg text-primary dark:text-pink-400">{appointment.services?.name}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/50">
                             <div>
-                                <div className="text-xs text-muted-foreground font-bold uppercase mb-1">Cliente</div>
-                                <div className="font-bold">{appointment.customer_name}</div>
-                                <div className="text-sm text-muted-foreground">{appointment.customer_phone}</div>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Fecha</p>
+                                <p className="font-medium text-sm flex items-center gap-2">
+                                    <Calendar size={14} className="text-primary" />
+                                    {new Date(appointment.appointment_date).toLocaleDateString()}
+                                </p>
                             </div>
-                            <div className="text-right">
-                                <div className="text-xs text-muted-foreground font-bold uppercase mb-1">Estado Actual</div>
-                                <span className={cn(
-                                    "px-2 py-1 rounded-full text-[10px] uppercase font-bold",
-                                    appointment.status === 'confirmed' ? "bg-green-500/10 text-green-500" :
-                                        appointment.status === 'cancelled' ? "bg-red-500/10 text-red-500" :
-                                            appointment.status === 'completed' ? "bg-blue-500/10 text-blue-500" :
-                                                "bg-yellow-500/10 text-yellow-500"
-                                )}>
-                                    {appointment.status === 'confirmed' ? 'Confirmada' :
-                                        appointment.status === 'cancelled' ? 'Cancelada' :
-                                            appointment.status === 'completed' ? 'Completada' : 'Pendiente'}
-                                </span>
+                            <div>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Hora</p>
+                                <p className="font-medium text-sm">
+                                    {appointment.appointment_time}
+                                </p>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Servicio:</span>
-                                <span className="font-bold text-primary dark:text-pink-400">{appointment.services?.name}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Fecha:</span>
-                                <span className="font-bold">{new Date(appointment.appointment_date).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Hora:</span>
-                                <span className="font-bold">{appointment.appointment_time}</span>
-                            </div>
-                            {appointment.notes && (
-                                <div className="pt-2 border-t border-border mt-2">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1">Notas del cliente:</span>
-                                    <p className="text-xs italic">"{appointment.notes}"</p>
+                        {appointment.notes && (
+                            <div className="pt-3 border-t border-border/50">
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Notas del cliente</p>
+                                <div className="bg-muted/30 p-3 rounded-xl border border-border/50 relative">
+                                    <p className="text-xs italic leading-relaxed text-muted-foreground">"{appointment.notes}"</p>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
+                        
+                        <p className="text-[9px] text-muted-foreground/50 font-bold uppercase text-right pt-2">ID: {appointment.id.slice(0, 8)}</p>
                     </div>
 
-                    <div className="space-y-3">
+                    {/* Actions Section */}
+                    <div className="space-y-4">
                         {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
-                            <>
-                                <p className="text-center text-xs font-bold uppercase text-muted-foreground tracking-widest">Cambiar Estado</p>
+                            <div className="space-y-3">
+                                <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest px-2">Acciones</p>
                                 <div className="grid grid-cols-2 gap-3">
                                     {appointment.status !== 'confirmed' && (
                                         <button
                                             onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas confirmar esta cita?', action: () => onUpdateStatus(appointment.id, 'confirmed') })}
                                             disabled={isLoading}
-                                            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all text-xs font-bold uppercase"
+                                            className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm"
                                         >
-                                            <Calendar size={16} /> Confirmar
+                                            <Calendar size={20} className="mb-1" /> Confirmar
                                         </button>
                                     )}
                                     <button
                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas cancelar esta cita?', action: () => onUpdateStatus(appointment.id, 'cancelled') })}
                                         disabled={isLoading}
                                         className={cn(
-                                            "flex items-center justify-center gap-2 p-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all text-xs font-bold uppercase",
+                                            "flex flex-col items-center justify-center gap-1 p-3 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm",
                                             appointment.status === 'confirmed' ? "col-span-2" : "col-span-1"
                                         )}
                                     >
-                                        <X size={16} /> Cancelar
+                                        <X size={20} className="mb-1" /> Cancelar
                                     </button>
                                     <button
                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas marcar esta cita como completada?', action: () => onUpdateStatus(appointment.id, 'completed') })}
                                         disabled={isLoading}
-                                        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 text-primary dark:text-pink-400 hover:bg-primary/20 transition-all text-xs font-bold uppercase col-span-2"
+                                        className="flex flex-col items-center justify-center gap-1 p-4 rounded-2xl bg-primary text-white hover:scale-[1.02] transition-all text-[11px] font-bold uppercase col-span-2 shadow-lg shadow-primary/20"
                                     >
-                                        {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />}
+                                        {isLoading ? <Loader2 size={24} className="animate-spin mb-1" /> : <Users size={24} className="mb-1" />}
                                         Marcar como Completada
                                     </button>
                                 </div>
-                            </>
+                            </div>
                         )}
 
                         {appointment.status === 'completed' && (
-                            <div className="pt-2 space-y-3">
-                                <p className="text-center text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Re-agendamiento Rápido</p>
-
+                            <div className="bg-purple-500/5 border border-purple-500/10 p-4 rounded-2xl space-y-3">
+                                <p className="text-[10px] font-bold uppercase text-purple-600 tracking-widest text-center">Reagendar para Retoque</p>
                                 <div className="grid grid-cols-3 gap-2">
                                     {[15, 20, 30].map(days => (
                                         <button
                                             key={days}
                                             onClick={() => onFrequentAppointment(appointment, days)}
-                                            className="flex flex-col items-center justify-center p-2 rounded-xl bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 transition-all text-[10px] font-bold uppercase"
+                                            className="flex flex-col items-center justify-center p-3 rounded-xl bg-background hover:bg-purple-500 border border-purple-500/20 hover:text-white text-purple-600 transition-all text-[10px] font-bold uppercase shadow-sm"
                                         >
-                                            <Calendar size={14} />
-                                            {days} días
+                                            <Calendar size={16} className="mb-1" />
+                                            {days} Días
                                         </button>
                                     ))}
                                 </div>

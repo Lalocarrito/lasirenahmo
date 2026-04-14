@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Playfair_Display } from 'next/font/google';
 import { Mail, Phone, Calendar as CalendarIcon, CheckCircle, XCircle, Search, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
@@ -11,6 +12,7 @@ interface ClientsTabProps {
 
 export default function ClientsTab({ appointments }: ClientsTabProps) {
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClient, setSelectedClient] = useState<any | null>(null);
 
     const clients = useMemo(() => {
         const clientsMap = new Map();
@@ -35,7 +37,8 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                     cancelled: 0,
                     pending: 0,
                     lastVisit: null,
-                    servicesString: new Set<string>()
+                    servicesString: new Set<string>(),
+                    appointmentsHistory: []
                 });
             }
 
@@ -54,6 +57,9 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
             if (apt.services?.name) {
                 client.servicesString.add(apt.services.name);
             }
+
+            // Unshift so newer are first
+            client.appointmentsHistory.unshift(apt);
         });
 
         const rawClients = Array.from(clientsMap.values()).map(c => ({
@@ -77,7 +83,7 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-8 relative"
         >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -111,11 +117,12 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="glass-card p-6 flex flex-col justify-between"
+                                onClick={() => setSelectedClient({ ...client, reliabilityScore })}
+                                className="glass-card p-6 flex flex-col justify-between cursor-pointer hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group"
                             >
                                 <div>
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase group-hover:bg-primary group-hover:text-white transition-colors">
                                             {client.name.charAt(0)}
                                         </div>
                                         {client.cancelled > 0 && (
@@ -125,34 +132,22 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                                         )}
                                     </div>
 
-                                    <h3 className="font-bold text-lg">{client.name}</h3>
+                                    <h3 className="font-bold text-lg leading-tight mb-3">{client.name}</h3>
 
-                                    <div className="space-y-2 mt-4 text-sm text-muted-foreground">
-                                        {client.email !== 'Sin email' && (
-                                            <div className="flex items-center gap-2">
-                                                <Mail size={14} className="text-primary" />
-                                                <span className="truncate">{client.email}</span>
-                                            </div>
-                                        )}
+                                    <div className="space-y-2 mt-2 text-sm text-muted-foreground">
                                         {client.phone !== 'Sin teléfono' && (
                                             <div className="flex items-center gap-2">
                                                 <Phone size={14} className="text-primary" />
-                                                <span>{client.phone}</span>
-                                            </div>
-                                        )}
-                                        {client.lastVisit && (
-                                            <div className="flex items-center gap-2">
-                                                <CalendarIcon size={14} className="text-primary" />
-                                                <span>Última visita: {client.lastVisit.toLocaleDateString('es-MX')}</span>
+                                                <span className="font-medium text-foreground">{client.phone}</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="mt-6 pt-4 border-t border-border/50">
+                                <div className="mt-4 pt-4 border-t border-border/50">
                                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-muted-foreground mb-1">Total</span>
+                                            <span className="text-muted-foreground mb-1">Citas</span>
                                             <span className="font-bold text-lg">{client.totalAppointments}</span>
                                         </div>
                                         <div className="flex flex-col items-center text-green-500">
@@ -164,11 +159,6 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                                             <span className="font-bold text-lg">{client.cancelled > 0 ? `${reliabilityScore}%` : '100%'}</span>
                                         </div>
                                     </div>
-                                    {client.services && (
-                                        <p className="mt-4 text-[10px] text-muted-foreground uppercase opacity-70 tracking-widest text-center truncate">
-                                            {client.services}
-                                        </p>
-                                    )}
                                 </div>
                             </motion.div>
                         );
@@ -181,6 +171,86 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Client Detail Slide-over Panel */}
+            <AnimatePresence>
+                {selectedClient && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedClient(null)}
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+                        />
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed top-0 right-0 bottom-0 w-full md:w-[400px] bg-background border-l border-border shadow-2xl z-[70] flex flex-col overflow-y-auto custom-scrollbar"
+                        >
+                            <div className="bg-primary/5 p-6 border-b border-border flex flex-col items-center text-center relative">
+                                <button className="absolute top-4 right-4 p-2 bg-background hover:bg-muted text-foreground rounded-full transition-colors" onClick={() => setSelectedClient(null)}>
+                                    <XCircle size={20} className="text-muted-foreground" />
+                                </button>
+                                
+                                <div className="w-24 h-24 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-4xl uppercase mb-4 shadow-inner">
+                                    {selectedClient.name.charAt(0)}
+                                </div>
+                                <h2 className={`${playfair.className} text-2xl mb-1`}>{selectedClient.name}</h2>
+                                {selectedClient.phone !== 'Sin teléfono' && (
+                                    <a href={`tel:${selectedClient.phone}`} className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-bold shadow-md hover:scale-105 transition-all">
+                                        <Phone size={16} /> Llamar {selectedClient.phone}
+                                    </a>
+                                )}
+                            </div>
+
+                            <div className="p-6 space-y-6 flex-1">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-muted/30 border border-border p-4 rounded-2xl">
+                                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-1">Fiabilidad</p>
+                                        <p className={cn("text-2xl font-black", selectedClient.reliabilityScore >= 80 ? "text-green-500" : selectedClient.reliabilityScore >= 50 ? "text-yellow-500" : "text-red-500")}>
+                                            {selectedClient.reliabilityScore}%
+                                        </p>
+                                    </div>
+                                    <div className="bg-muted/30 border border-border p-4 rounded-2xl">
+                                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-1">Última Visita</p>
+                                        <p className="text-sm font-bold flex items-center gap-1">
+                                            <CalendarIcon size={14} className="text-primary"/> 
+                                            {selectedClient.lastVisit ? selectedClient.lastVisit.toLocaleDateString('es-MX') : 'N/A'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest border-b border-border pb-2">Historial de Citas</p>
+                                    <div className="space-y-3">
+                                        {selectedClient.appointmentsHistory.map((apt: any) => (
+                                            <div key={apt.id} className="bg-card border border-border p-3 rounded-xl flex justify-between items-center relative overflow-hidden">
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20" />
+                                                <div className="pl-2">
+                                                    <p className="font-bold text-sm">{apt.services?.name || 'Servicio'}</p>
+                                                    <p className="text-xs text-muted-foreground">{new Date(apt.appointment_date).toLocaleDateString('es-MX')} • {apt.appointment_time}</p>
+                                                </div>
+                                                <span className={cn(
+                                                    "px-2 py-1 rounded-md text-[9px] uppercase font-bold",
+                                                    apt.status === 'confirmed' ? "bg-green-500/10 text-green-500" :
+                                                        apt.status === 'cancelled' ? "bg-red-500/10 text-red-500" :
+                                                            apt.status === 'completed' ? "bg-blue-500/10 text-blue-500" :
+                                                                "bg-yellow-500/10 text-yellow-500"
+                                                )}>
+                                                    {apt.status}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
