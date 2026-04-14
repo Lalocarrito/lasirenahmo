@@ -124,6 +124,37 @@ USING (
   )
 );
 
+DROP POLICY IF EXISTS "Admins y Staff pueden actualizar citas" ON appointments;
+CREATE POLICY "Admins y Staff pueden actualizar citas"
+ON appointments FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND appointments.staff_id = auth.uid()))
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND appointments.staff_id = auth.uid()))
+  )
+);
+
+DROP POLICY IF EXISTS "Solo admins pueden borrar citas" ON appointments;
+CREATE POLICY "Solo admins pueden borrar citas"
+ON appointments FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
 -- Trigger to create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$

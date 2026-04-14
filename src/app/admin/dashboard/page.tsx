@@ -55,28 +55,31 @@ export default function AdminDashboard() {
 
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
     const queryClient = useQueryClient();
 
     const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery<Appointment[]>({
         queryKey: ['appointments'],
         queryFn: async () => {
+            if (!isAuthorized) return [];
             const { data } = await supabase.from('appointments').select('*, services(*)').order('appointment_date', { ascending: true });
             return (data || []) as Appointment[];
-        }
+        },
+        enabled: !!isAuthorized
     });
 
     const { data: services = [], isLoading: isLoadingServices } = useQuery<Service[]>({
         queryKey: ['services'],
         queryFn: async () => {
+             if (!isAuthorized) return [];
              const { data } = await supabase.from('services').select('*').order('created_at', { ascending: false });
              return (data || []) as Service[];
-        }
+        },
+        enabled: !!isAuthorized
     });
 
+    const isDataLoading = isLoadingAppointments || isLoadingServices || isProfileLoading;
 
-    const isDataLoading = isLoadingAppointments || isLoadingServices || isProfileLoading; // Combined loading state
-
-    // Function to invalidate queries manually when needed
     const fetchData = async () => {
         queryClient.invalidateQueries({ queryKey: ['appointments'] });
         queryClient.invalidateQueries({ queryKey: ['services'] });
@@ -85,23 +88,39 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         setMounted(true);
-        const sub = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_OUT') window.location.href = '/admin';
-            if (session?.user) {
-                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                setProfile(data as Profile);
-                setIsProfileLoading(false);
-            } else {
-                setIsProfileLoading(false);
-            }
-        });
         
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (session?.user) {
-                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                setProfile(data as Profile);
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                window.location.href = '/admin';
+                return;
             }
+
+            const { data: profileData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (error || !profileData || (profileData.role !== 'admin' && profileData.role !== 'staff')) {
+                console.error("Unauthorized access attempt:", error);
+                window.location.href = '/';
+                return;
+            }
+
+            setProfile(profileData as Profile);
+            setIsAuthorized(true);
             setIsProfileLoading(false);
+        };
+
+        checkAuth();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_OUT') window.location.href = '/admin';
+            if (event === 'SIGNED_IN' && session) {
+                checkAuth();
+            }
         });
 
         // Setup real-time subscription for appointments
@@ -116,7 +135,7 @@ export default function AdminDashboard() {
             .subscribe();
 
         return () => {
-            sub.data.subscription.unsubscribe();
+            subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
     }, [queryClient]);
@@ -406,7 +425,7 @@ export default function AdminDashboard() {
                         />
                     )}
 
-                    {activeTab === 'Catálogo' && (
+                    {activeTab === 'Catálogo' && profile?.role === 'admin' && (
                         <CatalogTab
                             services={services}
                             setEditingService={setEditingService}
@@ -423,7 +442,7 @@ export default function AdminDashboard() {
                         />
                     )}
 
-                    {activeTab === 'Clientes' && (
+                    {activeTab === 'Clientes' && profile?.role === 'admin' && (
                         <ClientsTab
                             appointments={appointments}
                         />
@@ -435,7 +454,7 @@ export default function AdminDashboard() {
                         />
                     )}
 
-                    {activeTab === 'Equipo' && (
+                    {activeTab === 'Equipo' && profile?.role === 'admin' && (
                         <StaffTab />
                     )}
 
