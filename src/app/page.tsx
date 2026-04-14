@@ -57,7 +57,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen mesh-gradient dark:from-slate-900 dark:to-slate-800 transition-colors duration-500">
+    <main className="min-h-screen mesh-gradient transition-colors duration-500">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-6 backdrop-blur-md bg-white/10 dark:bg-black/10 border-b border-white/10">
         <div className={`text-xl md:text-2xl font-bold text-primary ${playfair.className}`}>
@@ -167,7 +167,7 @@ export default function Home() {
 
       <footer className="py-20 text-center border-t border-primary/10 bg-card/20 backdrop-blur-md">
         <div className={`${playfair.className} text-2xl text-primary mb-4`}>La Sirena</div>
-        <p className="text-muted-foreground text-sm mb-6">© 2024 La Sirena. Todos los derechos reservados.</p>
+        <p className="text-muted-foreground text-xs mb-6">© 2024 La Sirena. Todos los derechos reservados. <span className="opacity-20">v2.1</span></p>
         <div className="flex justify-center gap-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
           <Link href="/privacy" className="hover:text-primary transition-colors">Política de Privacidad</Link>
           <Link href="/terms" className="hover:text-primary transition-colors">Términos del Servicio</Link>
