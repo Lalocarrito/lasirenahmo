@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${outfit.variable} ${playfair.variable} antialiased`}>
         <QueryProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             {children}
             <Toaster position="bottom-right" theme="system" richColors />
           </ThemeProvider>

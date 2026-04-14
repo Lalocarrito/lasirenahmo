@@ -11,6 +11,10 @@
   --color-border: #e2e8f0;
   --color-muted: #64748b;
 
+  --color-mesh-1: hsla(328, 100%, 95%, 1);
+  --color-mesh-2: hsla(328, 70%, 90%, 1);
+  --color-mesh-3: hsla(45, 100%, 90%, 1);
+
   --font-body: "Outfit", ui-sans-serif, system-ui;
   --font-playfair: "Playfair Display", ui-serif, Georgia, serif;
 
@@ -28,6 +32,10 @@
   --color-border: #334155;
   --color-secondary: #1e1b4b;
   --color-muted: #94a3b8;
+
+  --color-mesh-1: hsla(328, 50%, 10%, 1);
+  --color-mesh-2: hsla(328, 30%, 15%, 1);
+  --color-mesh-3: hsla(220, 50%, 10%, 1);
 }
 
 @layer base {
@@ -59,17 +67,10 @@
   .mesh-gradient {
     background-color: var(--color-background);
     background-image:
-      radial-gradient(at 0% 0%, hsla(328, 100%, 95%, 1) 0px, transparent 50%),
-      radial-gradient(at 50% 0%, hsla(328, 70%, 90%, 1) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(45, 100%, 90%, 1) 0px, transparent 50%);
-    transition: background 0.5s ease;
-  }
-
-  .dark .mesh-gradient {
-    background-image:
-      radial-gradient(at 0% 0%, hsla(328, 50%, 10%, 1) 0px, transparent 50%),
-      radial-gradient(at 50% 0%, hsla(328, 30%, 15%, 1) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(220, 50%, 10%, 1) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, var(--color-mesh-1) 0px, transparent 50%),
+      radial-gradient(at 50% 0%, var(--color-mesh-2) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, var(--color-mesh-3) 0px, transparent 50%);
+    transition: background 0.8s ease-in-out;
   }
 
   .siren-button {
