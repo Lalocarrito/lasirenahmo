@@ -42,6 +42,7 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export function BookingProvider({ children, initialStep = 1 }: { children: ReactNode, initialStep?: number }) {
     const [step, setStep] = useState(initialStep);
+    const [isInitialized, setIsInitialized] = useState(false);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [selectedStaff, setSelectedStaff] = useState<Profile | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -79,10 +80,12 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
                 console.error("Error loading booking state:", e);
             }
         }
+        setIsInitialized(true);
     }, []);
 
     // Save to localStorage on changes
     useEffect(() => {
+        if (!isInitialized) return;
         const state = {
             step,
             selectedService,
@@ -93,7 +96,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             _timestamp: Date.now()
         };
         localStorage.setItem('la-sirena-booking-state', JSON.stringify(state));
-    }, [step, selectedService, selectedStaff, selectedDate, selectedTime, notes]);
+    }, [step, selectedService, selectedStaff, selectedDate, selectedTime, notes, isInitialized]);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -147,15 +150,22 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         if (!error && extraData?.phone) {
             // Update profile with the new phone if provided
             await supabase.from('profiles').update({ phone: extraData.phone }).eq('id', user.id);
+            // Also sync it to auth metadata so next loads detect it immediately
+            await supabase.auth.updateUser({ data: { phone: extraData.phone } });
+            
+            // Re-fetch session to update local user state
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) setUser(session.user);
         }
 
         setIsSubmitting(false);
         if (error) {
-            console.error("DEBUG - Error al crear cita:", error);
+            console.error("DEBUG - Error al crear cita:", error, "Payload:", { service_id: selectedService.id, staff_id: selectedStaff.id, customer_email: user.email, customer_phone: customerPhone, appointment_date: appointmentDateStr, appointment_time: selectedTime });
+            const errorStr = JSON.stringify(error, Object.getOwnPropertyNames(error));
             if (error.code === '23505') {
                 setToast({ message: 'Ups, este horario acaba de ser reservado por alguien más. Por favor, elige otro.', type: 'error' });
             } else {
-                setToast({ message: `Error (${error.code || '400'}): ${error.message}. ${error.hint || ''}`, type: 'error' });
+                setToast({ message: `Error (${error?.code || 'Desconocido'}): ${error?.message || errorStr}`, type: 'error' });
             }
             return false;
         }

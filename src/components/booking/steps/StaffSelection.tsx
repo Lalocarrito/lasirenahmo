@@ -5,7 +5,7 @@ import { useBooking } from '../BookingContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
-import { Loader2, User } from 'lucide-react';
+import { Loader2, User, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Playfair_Display } from 'next/font/google';
 
@@ -39,7 +39,7 @@ export default function StaffSelection() {
             className="space-y-8"
         >
             <div className="text-center space-y-2">
-                <h2 className={cn("text-4xl text-foreground", playfair.className)}>Selecciona Empleado</h2>
+                <h2 className={cn("text-4xl text-foreground", playfair.className)}>Elige a tu Profesional</h2>
                 <p className="text-muted-foreground">¿Con quién te gustaría agendar tu cita?</p>
             </div>
 
@@ -75,14 +75,7 @@ export default function StaffSelection() {
                 </div>
             )}
 
-            <div className="flex justify-start">
-                <button
-                    onClick={prevStep}
-                    className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-                >
-                    Volver Atrás
-                </button>
-            </div>
+
         </motion.div>
     );
 }

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
 import { useEffect } from 'react';
-import { CheckCircle, Users } from 'lucide-react';
+import { CheckCircle, Users, LogOut, Calendar, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingProvider, useBooking } from './booking/BookingContext';
 import { supabase } from '@/lib/supabase';
@@ -19,13 +19,23 @@ import UserAppointments from './booking/steps/UserAppointments';
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
 function BookingFlowContent() {
-    const { step, viewMode, setViewMode, user, toast } = useBooking();
+    const { step, setStep, viewMode, setViewMode, user, toast } = useBooking();
 
     useEffect(() => {
         const handleOpen = () => setViewMode('my-appointments');
         window.addEventListener('open-appointments', handleOpen);
         return () => window.removeEventListener('open-appointments', handleOpen);
     }, [setViewMode]);
+
+    // Auto-scroll al encabezado cuando cambia el paso
+    useEffect(() => {
+        const header = document.getElementById('booking-flow-header');
+        if (header) {
+            setTimeout(() => {
+                header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+        }
+    }, [step]);
 
     useEffect(() => {
         if (step > 1 && viewMode !== 'my-appointments') {
@@ -41,41 +51,55 @@ function BookingFlowContent() {
         return <UserAppointments />;
     }
 
+    const handleBack = () => {
+        if (step === 5) {
+            setStep(3); // Si están en resumen, volver a edición de fecha
+        } else if (step > 1 && step < 6) {
+            setStep(step - 1);
+        }
+    };
+
     return (
         <div className="w-full max-w-4xl mx-auto px-4 py-12">
-            {/* Header & Step Indicator */}
-            <div className="flex justify-between items-center mb-12">
-                <div className="flex gap-2">
+            {/* Header & Navigation */}
+            <div className="flex flex-col gap-6 mb-12" id="booking-flow-header">
+                <div className="flex justify-end items-center h-10">
+                    {user ? (
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setViewMode('my-appointments')}
+                                className="text-xs font-bold text-primary border border-primary/20 px-4 py-2 rounded-full hover:bg-primary/10 transition-colors flex items-center gap-2 cursor-pointer shadow-sm bg-card"
+                            >
+                                <Calendar size={14} /> Mis Citas
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    await supabase.auth.signOut();
+                                    window.location.reload();
+                                }}
+                                className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                title="Cerrar Sesión"
+                            >
+                                <LogOut size={18} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div />
+                    )}
+                </div>
+
+                {/* Progress Indicator */}
+                <div className="flex gap-2 justify-center">
                     {[1, 2, 3, 4, 5, 6].map((i, idx) => (
                         <div
                             key={i}
                             className={cn(
                                 "h-1.5 rounded-full transition-all duration-700",
-                                step === i ? "w-12 bg-primary" : (idx < [1, 2, 3, 4, 5, 6].indexOf(step) ? "w-4 bg-primary/40" : "w-4 bg-muted")
+                                step === i ? "w-12 bg-primary" : (idx < [1, 2, 3, 4, 5, 6].indexOf(step) ? "w-4 bg-primary/40" : "w-4 bg-muted/30")
                             )}
                         />
                     ))}
                 </div>
-                {user && (
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setViewMode('my-appointments')}
-                            className="text-[10px] font-bold uppercase tracking-widest text-primary hover:scale-105 transition-all flex items-center gap-2 border border-primary/20 px-4 py-2 rounded-full"
-                        >
-                            <Users size={14} /> Mis Reservas
-                        </button>
-                        <button
-                            onClick={async () => {
-                                await supabase.auth.signOut();
-                                window.location.reload();
-                            }}
-                            className="text-[10px] font-bold uppercase tracking-widest text-red-400 hover:text-red-500 transition-colors"
-                            title="Cerrar Sesión"
-                        >
-                            Salir
-                        </button>
-                    </div>
-                )}
             </div>
 
             <div id="booking-step-content">
@@ -87,6 +111,17 @@ function BookingFlowContent() {
                     {(step === 5 || step === 6) && <BookingSummary />}
                 </AnimatePresence>
             </div>
+
+            {step > 1 && step < 6 && (
+                <div className="flex justify-center mt-12">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 text-xs font-bold text-primary border border-primary/20 bg-card hover:bg-primary hover:text-white px-8 py-3 rounded-full transition-all group shadow-sm"
+                    >
+                        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Volver Atrás
+                    </button>
+                </div>
+            )}
 
             {/* Premium Toast Notification */}
             <AnimatePresence>

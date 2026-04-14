@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
 
@@ -35,7 +35,43 @@ export default function BookingSummary() {
                     <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
                 </div>
                 <h2 className={`${playfair.className} text-5xl mb-6 italic`}>¡Reserva Guardada!</h2>
-                <p className="text-muted-foreground mb-12 text-lg">Tu espacio ha sido asegurado. Nos vemos pronto en La Sirena HMO.</p>
+                <div className="bg-card w-full p-6 rounded-3xl border border-border/50 text-left mb-10 shadow-lg shadow-black/5 space-y-4">
+                    <p className="text-[10px] text-center text-primary/80 uppercase font-bold tracking-[0.2em] mb-4">Guarda captura de esta confirmación</p>
+                    
+                    <div className="flex justify-between items-end border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Cita</span>
+                        <span className="font-bold text-sm text-right">
+                           {selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })} <br/>
+                           <span className="text-primary">{selectedTime}</span>
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Servicio</span>
+                        <span className="font-bold text-sm">{selectedService?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-border/50 pb-3">
+                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Lashista</span>
+                        <span className="font-bold text-sm">{selectedStaff ? (selectedStaff.full_name || 'Lashista') : 'Cualquiera'}</span>
+                    </div>
+                    <div className="bg-primary/5 p-4 rounded-2xl flex justify-between items-center text-primary mt-2 border border-primary/20">
+                        <span className="font-bold uppercase tracking-widest text-[10px]">Total a liquidar en sucursal</span>
+                        <span className="font-bold text-lg">${selectedService?.price}</span>
+                    </div>
+                    
+                    <p className="text-[10px] text-muted-foreground text-center pt-2 leading-relaxed">
+                        Recomendaciones: <br/> Por favor llega 5 minutos antes con tus pestañas limpias.
+                    </p>
+                </div>
+
+                <div className="w-full rounded-3xl overflow-hidden border border-border/50 mb-10 shadow-sm relative h-64 sm:h-80">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1743.0824296146386!2d-111.01188260160522!3d29.100813899999988!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ce81e87a0fcc95%3A0x1a261340df03f79f!2sLA%20SIRENA%20%7C%20Lash%20Studio%20%26%20Academy!5e0!3m2!1ses-419!2sus!4v1776190435370!5m2!1ses-419!2sus" 
+                        className="absolute inset-0 w-full h-full border-0"
+                        allowFullScreen={true}
+                        loading="lazy" 
+                        referrerPolicy="no-referrer-when-downgrade"
+                    />
+                </div>
 
                 <div className="space-y-4">
                     <button
@@ -53,15 +89,17 @@ export default function BookingSummary() {
                         >
                             Volver al inicio
                         </button>
-                        <button
-                            onClick={async () => {
-                                await supabase.auth.signOut();
-                                window.location.reload();
-                            }}
-                            className="text-[10px] uppercase font-bold text-muted-foreground hover:text-red-400 transition-colors"
-                        >
-                            Cerrar sesión
-                        </button>
+                        {user && (
+                            <button
+                                onClick={async () => {
+                                    await supabase.auth.signOut();
+                                    window.location.reload();
+                                }}
+                                className="text-[10px] uppercase font-bold text-muted-foreground hover:text-red-400 transition-colors"
+                            >
+                                Cerrar sesión
+                            </button>
+                        )}
                     </div>
                 </div>
             </motion.div>
@@ -76,53 +114,46 @@ export default function BookingSummary() {
             exit={{ opacity: 0, y: -30 }}
             className="max-w-xl mx-auto"
         >
-            <div className="text-center mb-10">
+            <div className="text-center mb-6">
                 <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Finalizar</h2>
-                <p className="text-muted-foreground">Revisa los detalles y reserva tu espacio.</p>
-                {user && (
-                    <p className="text-[10px] mt-2 text-muted-foreground uppercase font-bold tracking-widest">
-                        Reserva para: <span className="text-primary">{user.email}</span>
-                        <button
-                            onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
-                            className="ml-2 text-red-400 hover:text-red-500 underline lowercase font-normal italic"
-                        >
-                            (¿No eres tú? Cerrar sesión)
-                        </button>
-                    </p>
-                )}
             </div>
 
             <div className="siren-card !p-8 shadow-3xl space-y-8">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Profesional</span>
-                        <p className="font-bold text-lg leading-tight">{selectedStaff?.full_name || 'Agendado'}</p>
+                {selectedService?.image_url && (
+                    <div className="w-full h-48 md:h-64 rounded-2xl overflow-hidden relative shadow-md border border-border/50">
+                        <img src={selectedService.image_url} alt={selectedService.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                     </div>
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Servicio</span>
-                        <p className="font-bold text-primary text-lg leading-tight">{selectedService?.name}</p>
+                )}
+                <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Profesional</span>
+                        <p className="font-bold text-sm">{selectedStaff ? (selectedStaff.full_name || 'Lashista') : 'Cualquiera'}</p>
                     </div>
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Inversión</span>
-                        <p className="font-bold text-lg">${selectedService?.price}</p>
+                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Servicio</span>
+                        <p className="font-bold text-sm text-primary uppercase tracking-wide">{selectedService?.name}</p>
                     </div>
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Fecha</span>
-                        <p className="font-bold">{selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}</p>
+                    <div className="flex justify-between items-center p-5 bg-primary/5 rounded-2xl border border-primary/20 shadow-sm">
+                        <span className="text-[10px] uppercase font-bold text-primary tracking-widest">Inversión</span>
+                        <p className="font-bold text-lg text-primary">${selectedService?.price}</p>
                     </div>
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-border/50 space-y-1">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Hora</span>
-                        <p className="font-bold">{selectedTime}</p>
+                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cita</span>
+                        <p className="font-bold text-sm text-right">
+                            {selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}<br/>
+                            <span className="text-primary">{selectedTime}</span>
+                        </p>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Notas para el especialista (Opcional)</label>
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Notas (Opcional)</label>
                     <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none h-32 resize-none text-sm"
-                        placeholder="Ej: Tengo piel sensible, prefiero música ambiental suave..."
+                        className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none h-14 resize-none text-sm"
+                        placeholder="Ej: Tengo ojos sensibles..."
                     />
                 </div>
 
@@ -136,10 +167,12 @@ export default function BookingSummary() {
                         <input
                             type="tel"
                             required
+                            maxLength={10}
+                            pattern="[0-9]{10}"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                             className="w-full p-4 rounded-2xl bg-primary/5 border border-primary/20 focus:border-primary transition-all outline-none text-sm font-bold"
-                            placeholder="662 XXX XXXX"
+                            placeholder="Ej: 6621234567"
                         />
                         <p className="text-[9px] text-muted-foreground italic ml-1">Lo necesitamos para enviarte recordatorios de tu cita.</p>
                     </motion.div>
@@ -161,9 +194,20 @@ export default function BookingSummary() {
 
                 <button
                     onClick={async () => {
-                        if (needsPhone && !phone) {
-                            alert("Por favor, ingresa tu número de teléfono.");
+                        if (!user) {
+                            alert("Sesión inválida. Por favor, vuelve al paso anterior o recarga la página para iniciar sesión.");
                             return;
+                        }
+
+                        if (needsPhone) {
+                            if (!phone) {
+                                alert("Por favor, ingresa tu número de teléfono.");
+                                return;
+                            }
+                            if (phone.length < 10) {
+                                alert("El número de teléfono debe tener 10 dígitos obligatoriamente.");
+                                return;
+                            }
                         }
 
                         setIsSubmitting(true);
@@ -186,7 +230,7 @@ export default function BookingSummary() {
                     {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Confirmar y Reservar'}
                 </button>
 
-                <button onClick={() => setStep(3)} className="w-full text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-colors">Volver a editar fecha/hora</button>
+
             </div>
         </motion.div>
     );

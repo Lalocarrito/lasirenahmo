@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
@@ -19,11 +19,11 @@ export default function AuthOrGuest() {
     } = useBooking();
 
     // Auto-advance if user logged in (e.g. after Google redirect)
-    useState(() => {
+    useEffect(() => {
         if (user) {
             setStep(5);
         }
-    });
+    }, [user, setStep]);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,7 +33,7 @@ export default function AuthOrGuest() {
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin }
+            options: { redirectTo: window.location.origin + '/#reservar' }
         });
         if (error) setToast({ message: error.message, type: 'error' });
     };
@@ -59,29 +59,10 @@ export default function AuthOrGuest() {
                 setToast({ message: isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!', type: 'success' });
                 setUser(authUser);
 
-                // Small delay to ensure state updates before moving to step 5 or making booking
-                setTimeout(async () => {
-                    const now = new Date();
-                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-                    const { error: bookingError } = await supabase.from('appointments').insert({
-                        service_id: selectedService?.id,
-                        customer_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Cliente',
-                        customer_email: authUser.email,
-                        customer_phone: authUser.user_metadata?.phone || '',
-                        appointment_date: today,
-                        appointment_time: selectedTime,
-                        notes: notes,
-                        status: 'pending'
-                    });
-
-                    if (!bookingError) {
-                        setStep(6);
-                    } else {
-                        console.error("DEBUG - Error al guardar cita tras login:", bookingError);
-                        setToast({ message: `Error al guardar cita (${bookingError.code}): ${bookingError.message}`, type: 'error' });
-                    }
-                }, 500);
+                // Small delay to ensure state updates before moving
+                setTimeout(() => {
+                    setStep(5);
+                }, 100);
             }
         }
     };
@@ -116,24 +97,22 @@ export default function AuthOrGuest() {
 
                 <form onSubmit={handleEmailAuth} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Email Corporativo</label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Correo Electrónico</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none"
-                            placeholder="ejemplo@correo.com"
                             required
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Contraseña Segura</label>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Contraseña</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none"
-                            placeholder="••••••••"
                             required
                         />
                     </div>
@@ -146,20 +125,15 @@ export default function AuthOrGuest() {
                     </button>
                 </form>
 
-                <div className="relative py-8">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/50"></div></div>
-                    <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.3em]"><span className="bg-card px-4 text-muted-foreground/40">Ó</span></div>
-                </div>
-
                 <button
                     onClick={handleGoogleLogin}
-                    className="w-full p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
+                    className="w-full mt-4 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
                 >
                     <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
-                    Entrar con Google
+                    Continuar con Google
                 </button>
             </div>
-            <button onClick={() => setStep(3)} className="w-full mt-8 text-[10px] uppercase font-bold text-muted-foreground hover:text-primary tracking-[0.2em] transition-all">← Volver al calendario</button>
+
         </motion.div>
     );
 }

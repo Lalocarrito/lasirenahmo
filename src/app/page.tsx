@@ -3,7 +3,7 @@
 import { Playfair_Display } from 'next/font/google';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Calendar, ChevronRight, LogOut, User } from 'lucide-react';
+import { Moon, Sun, Calendar, ChevronRight, LogOut, User, Sparkles, Droplets, Heart } from 'lucide-react';
 import BookingFlow from '@/components/BookingFlow';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,21 +19,8 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null); // Supabase session user is complex type, ANY is acceptable for raw session user but better to not touch Auth type here.
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [showFloatingButton, setShowFloatingButton] = useState(true);
-
   useEffect(() => {
     setMounted(true);
-    
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        setShowFloatingButton(!entry.isIntersecting);
-      });
-    }, { threshold: 0.1, rootMargin: "0px" });
-
-    const target = document.getElementById('reservar');
-    if (target) observer.observe(target);
-
-    return () => observer.disconnect();
   }, []);
 
 
@@ -121,7 +108,7 @@ export default function Home() {
 
 
       {/* Hero Section */}
-      <section id="inicio" className="relative px-8 pt-20 pb-20 flex flex-col items-center text-center">
+      <section id="inicio" className="relative px-8 pt-32 md:pt-40 pb-20 flex flex-col items-center text-center">
         <div className="absolute top-20 -left-20 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse" />
         <div className="absolute top-40 -right-20 w-96 h-96 bg-accent/10 rounded-full blur-[100px] animate-pulse" />
 
@@ -134,21 +121,40 @@ export default function Home() {
           Diseño premium de pestañas en Hermosillo. Realzamos tu mirada con estilo, lujo y perfección.
         </p>
 
-        <div className="flex gap-4">
-          <Link href="#reservar" className="siren-button">
-            Agendar Ahora
-          </Link>
-        </div>
       </section>
 
 
 
-      {/* Booking Section */}
-      <section id="reservar" className="px-8 py-20 bg-card/20 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto text-center mb-12">
-          <h2 className={`${playfair.className} text-5xl mb-4`}>Reserva tu cita</h2>
-          <p className="text-gray-500 italic">Misticismo y elegancia en cada sesión.</p>
+
+
+      {/* Galería Section */}
+      <section className="px-8 py-24 bg-card/30 backdrop-blur-sm border-y border-border/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div>
+              <h2 className={`${playfair.className} text-4xl md:text-5xl mb-4 text-foreground`}>Nuestros <span className="text-primary italic">Estilos</span></h2>
+              <p className="text-muted-foreground">Desde un look natural hasta el volumen más dramático.</p>
+            </div>
+            <Link href="#reservar" className="text-xs font-bold uppercase tracking-widest text-primary hover:text-foreground transition-colors border-b border-primary pb-1">Ver todos los servicios</Link>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             {["Clásicas", "Híbridas", "Volumen", "Mega Volumen"].map((style, i) => (
+               <motion.div key={style} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} className="group relative aspect-square rounded-3xl overflow-hidden cursor-pointer">
+                 <img src={`https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80`} alt={style} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 blur-[2px] group-hover:blur-0" />
+                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                   <h4 className={`${playfair.className} text-white text-xl md:text-2xl font-bold tracking-wider`}>{style}</h4>
+                 </div>
+               </motion.div>
+             ))}
+          </div>
         </div>
+      </section>
+
+      {/* Booking Section */}
+      <section id="reservar" className="px-8 py-20 bg-card/20 backdrop-blur-md relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -mr-40 -mt-40 pointer-events-none" />
+
         <BookingFlow />
       </section>
 
@@ -156,14 +162,6 @@ export default function Home() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
-
-      {/* Floating Reserve Button for Mobile */}
-      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-40 md:hidden transition-all duration-500 ${showFloatingButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 pointer-events-none'}`}>
-        <Link href="#reservar" className="siren-button flex items-center gap-2 whitespace-nowrap px-10">
-          <Calendar size={20} />
-          Reservar Ahora
-        </Link>
-      </div>
 
       <footer className="py-20 text-center border-t border-primary/10 bg-card/20 backdrop-blur-md">
         <div className={`${playfair.className} text-2xl text-primary mb-4`}>La Sirena</div>

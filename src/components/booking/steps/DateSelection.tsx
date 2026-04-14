@@ -126,6 +126,15 @@ export default function DateSelection() {
         calculateSlots();
     }, [selectedDate, businessAvailability, overrides]);
 
+    useEffect(() => {
+        if (selectedDate) {
+            setTimeout(() => {
+                const el = document.getElementById('time-slots-container');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [selectedDate]);
+
     return (
         <motion.div
             key="step2"
@@ -134,13 +143,8 @@ export default function DateSelection() {
             exit={{ opacity: 0, x: -50 }}
             className="space-y-8"
         >
-            <div className="flex items-center gap-4 mb-8">
-                <button onClick={prevStep} aria-label="Volver al paso anterior" className="p-3 hover:bg-primary/10 rounded-full text-primary transition-all">
-                    <ChevronLeft size={28} />
-                </button>
-                <div>
-                    <h2 className={`${playfair.className} text-4xl italic leading-none`}>Agenda tu cita</h2>
-                </div>
+            <div className="flex flex-col gap-2 mb-8 text-center">
+                <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Agenda tu cita</h2>
             </div>
 
             <div className="flex flex-col gap-12">
@@ -148,43 +152,48 @@ export default function DateSelection() {
                     <DayCarousel selectedDate={selectedDate} onSelect={(d) => setSelectedDate(d)} overrides={overrides} />
                 </div>
 
-                <div className="space-y-8">
-                    <div className="space-y-1">
-                        <h3 className="text-xs uppercase font-bold tracking-[0.2em] text-muted-foreground border-l-4 border-primary pl-4 py-1">Horarios Sugeridos</h3>
-                        {selectedDate && (
+                {selectedDate && (
+                    <motion.div 
+                        id="time-slots-container"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-8"
+                    >
+                        <div className="space-y-1">
+                            <h3 className="text-xs uppercase font-bold tracking-[0.2em] text-muted-foreground border-l-4 border-primary pl-4 py-1">Horarios Sugeridos</h3>
                             <p className="text-[10px] font-bold text-primary ml-5 uppercase">
                                 {selectedDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </p>
-                        )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        {availableSlots.length > 0 ? availableSlots.map((time) => (
-                            <button
-                                key={time}
-                                onClick={() => {
-                                    setSelectedTime(time);
-                                    if (!user) setStep(4);
-                                    else setStep(5);
-                                }}
-                                className={cn(
-                                    "p-5 rounded-2xl border-2 transition-all text-sm font-bold flex flex-col gap-1 items-center justify-center group",
-                                    selectedTime === time
-                                        ? "bg-primary text-white border-primary shadow-xl shadow-primary/20 scale-[1.02]"
-                                        : "bg-muted/10 border-transparent hover:border-primary/30 hover:bg-muted/30"
-                                )}
-                            >
-                                <Clock size={18} className={cn(selectedTime === time ? "text-white" : "text-primary")} />
-                                {time}
-                            </button>
-                        )) : (
-                            <div className="col-span-2 py-16 flex flex-col items-center justify-center text-center text-muted-foreground bg-muted/5 rounded-3xl border border-dashed border-border/50">
-                                <CalendarOff size={48} className="text-primary/20 mb-4" />
-                                <span className="font-bold text-lg mb-1">{selectedDate ? "Sin disponibilidad" : "Selecciona una fecha"}</span>
-                                <span className="text-xs max-w-[250px]">{selectedDate ? "Intenta buscando en el siguiente día o la próxima semana." : "Elige un día arriba para ver los horarios libres."}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {availableSlots.length > 0 ? availableSlots.map((time) => (
+                                <button
+                                    key={time}
+                                    onClick={() => {
+                                        setSelectedTime(time);
+                                        if (!user) setStep(4);
+                                        else setStep(5);
+                                    }}
+                                    className={cn(
+                                        "p-5 rounded-2xl border-2 transition-all text-sm font-bold flex flex-col gap-1 items-center justify-center group",
+                                        selectedTime === time
+                                            ? "bg-primary text-white border-primary shadow-xl shadow-primary/20 scale-[1.02]"
+                                            : "bg-muted/10 border-transparent hover:border-primary/30 hover:bg-muted/30"
+                                    )}
+                                >
+                                    <Clock size={18} className={cn(selectedTime === time ? "text-white" : "text-primary")} />
+                                    {time}
+                                </button>
+                            )) : (
+                                <div className="col-span-2 py-16 flex flex-col items-center justify-center text-center text-muted-foreground bg-muted/5 rounded-3xl border border-dashed border-border/50">
+                                    <CalendarOff size={48} className="text-primary/20 mb-4" />
+                                    <span className="font-bold text-lg mb-1">Sin disponibilidad</span>
+                                    <span className="text-xs max-w-[250px]">Intenta buscando en el siguiente día o la próxima semana.</span>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </motion.div>
     );

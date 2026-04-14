@@ -33,7 +33,6 @@ export default function ServiceSelection() {
         >
             <div className="text-center max-w-lg mx-auto mb-12">
                 <h2 className={`${playfair.className} text-5xl mb-4 italic`}>Servicios</h2>
-                <p className="text-muted-foreground">Selecciona el tratamiento perfecto para realzar tu belleza natural.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-8">
                 {isLoadingServices ? (
@@ -59,10 +58,10 @@ export default function ServiceSelection() {
                             </div>
                             <div className="p-6">
                                 <h3 className={`${playfair.className} text-2xl mb-2 group-hover:text-primary transition-colors uppercase tracking-tight`}>{service.name}</h3>
-                                <p className="text-muted-foreground text-sm line-clamp-2 italic mb-6">"{service.description}"</p>
-                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-primary">
-                                    <span>Duración: {service.duration}</span>
-                                    <div className="flex items-center gap-2 group-hover:translate-x-2 transition-transform">
+                                <p className="text-muted-foreground text-sm line-clamp-2 italic mb-6">{service.description}</p>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-[10px] font-bold uppercase tracking-widest gap-4">
+                                    <span className="text-muted-foreground">Duración: {service.duration}</span>
+                                    <div className="flex items-center justify-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full shadow-lg shadow-primary/30 group-hover:-translate-y-1 group-hover:shadow-primary/50 transition-all">
                                         Reservar Ahora <ArrowRight size={14} />
                                     </div>
                                 </div>
