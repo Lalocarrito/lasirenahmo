@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isProfileLoading, setIsProfileLoading] = useState(true);
 
-    const { theme, setTheme } = useTheme();
+    const { theme, setTheme, resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
     const queryClient = useQueryClient();
@@ -371,11 +371,11 @@ export default function AdminDashboard() {
 
                 <div className="mt-auto hidden md:block pt-6 border-t border-border space-y-2">
                     <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                         className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-muted-foreground hover:bg-muted/50 transition-all w-full"
                     >
-                        {mounted && theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        {mounted && theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+                        {mounted && resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        {mounted && resolvedTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
                     </button>
                     <button
                         onClick={handleLogout}

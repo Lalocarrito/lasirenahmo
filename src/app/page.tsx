@@ -15,7 +15,7 @@ import { Profile } from '@/types';
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 export default function Home() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null); // Supabase session user is complex type, ANY is acceptable for raw session user but better to not touch Auth type here.
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -74,11 +74,11 @@ export default function Home() {
 
           <div className="flex items-center gap-2 border-l border-white/10 pl-4 md:pl-6">
             <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
               aria-label="Cambiar tema"
               className="p-2 rounded-full bg-white/20 dark:bg-black/20 hover:scale-110 transition-all text-primary"
             >
-              {mounted && theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {mounted && resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
             {user ? (
