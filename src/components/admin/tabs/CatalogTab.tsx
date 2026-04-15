@@ -1,13 +1,14 @@
 'use client';
 
 import { Playfair_Display } from 'next/font/google';
-import { Users } from 'lucide-react';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
+import type { Service } from '@/types';
+
 interface CatalogTabProps {
-    services: any[];
-    setEditingService: (service: any) => void;
+    services: Service[];
+    setEditingService: (service: Service | null) => void;
 }
 
 export default function CatalogTab({ services, setEditingService }: CatalogTabProps) {
@@ -16,7 +17,7 @@ export default function CatalogTab({ services, setEditingService }: CatalogTabPr
             <div className="flex justify-between items-center">
                 <h2 className={`${playfair.className} text-3xl`}>Catálogo de Servicios</h2>
                 <button
-                    onClick={() => setEditingService({ name: '', price: 0, description: '', duration: '', image_url: '' })}
+                    onClick={() => setEditingService({ name: '', price: 0, description: '', duration: '', image_url: '' } as unknown as Service)}
                     className="siren-button !py-2 !px-6 text-sm flex items-center gap-2"
                 >
                     + Nuevo Servicio

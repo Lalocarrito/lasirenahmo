@@ -3,21 +3,22 @@
 import { Playfair_Display } from 'next/font/google';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Calendar, ChevronRight, LogOut, User, Sparkles, Droplets, Heart } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Moon, Sun, Calendar, LogOut, User } from 'lucide-react';
 import BookingFlow from '@/components/BookingFlow';
 import { supabase } from '@/lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import LoginModal from '@/components/auth/LoginModal';
-import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
-import { Profile } from '@/types';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 export default function Home() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [user, setUser] = useState<any>(null); // Supabase session user is complex type, ANY is acceptable for raw session user but better to not touch Auth type here.
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -40,7 +41,8 @@ export default function Home() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    setUser(null);
+    router.refresh();
   };
 
   return (
@@ -122,7 +124,6 @@ export default function Home() {
         </p>
 
       </section>
-
 
 
 

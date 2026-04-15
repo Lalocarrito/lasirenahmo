@@ -1,26 +1,92 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2, Sparkles, ChevronLeft } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
+/**
+ * Zod schema for booking summary validation.
+ * Replaces imperative if/alert validation.
+ */
+const bookingSummarySchema = z.object({
+    phone: z.string().optional(),
+    notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
+    honeypot: z.string().max(0, '').optional(),
+    termsAccepted: z.boolean().refine(val => val === true, {
+        message: 'Debes aceptar los términos para continuar.',
+    }),
+});
+
+type BookingSummaryFormData = z.infer<typeof bookingSummarySchema>;
+
 export default function BookingSummary() {
+    const router = useRouter();
     const {
         step, setStep,
         selectedService, selectedStaff, selectedDate, selectedTime,
         notes, setNotes,
         user,
         createAppointment,
-        isSubmitting, setIsSubmitting
+        isSubmitting, setIsSubmitting,
+        setToast,
     } = useBooking();
-    const [honeypot, setHoneypot] = useState('');
-    const [phone, setPhone] = useState('');
+
     const needsPhone = user && !user.user_metadata?.phone;
+
+    // Build schema dynamically based on whether phone is needed
+    const formSchema = needsPhone
+        ? bookingSummarySchema.extend({
+            phone: z.string()
+                .min(10, 'El número de teléfono debe tener 10 dígitos.')
+                .max(10, 'El número de teléfono debe tener 10 dígitos.')
+                .regex(/^[0-9]+$/, 'Solo se permiten números.'),
+        })
+        : bookingSummarySchema;
+
+    const { register, handleSubmit, formState: { errors }, watch } = useForm<BookingSummaryFormData>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            phone: '',
+            notes: notes || '',
+            honeypot: '',
+            termsAccepted: false,
+        },
+    });
+
+    const onSubmit = async (data: BookingSummaryFormData) => {
+        if (!user) {
+            setToast({ message: 'Sesión inválida. Por favor, vuelve al paso anterior para iniciar sesión.', type: 'error' });
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        // Anti-spam check
+        if (data.honeypot && data.honeypot.trim() !== '') {
+            // Fake success after short delay to trick bots
+            await new Promise(r => setTimeout(r, 800));
+            setStep(6);
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Sync notes to context
+        if (data.notes !== undefined) setNotes(data.notes);
+
+        const success = await createAppointment({ phone: needsPhone ? data.phone : undefined });
+        if (success) setStep(6);
+        setIsSubmitting(false);
+    };
 
     if (step === 6) {
         return (
@@ -84,7 +150,7 @@ export default function BookingSummary() {
                     </button>
                     <div className="pt-6 border-t border-border flex flex-col gap-4">
                         <button
-                            onClick={() => window.location.reload()}
+                            onClick={() => router.refresh()}
                             className="text-xs font-bold uppercase tracking-[0.3em] text-primary hover:underline transition-all"
                         >
                             Volver al inicio
@@ -93,7 +159,7 @@ export default function BookingSummary() {
                             <button
                                 onClick={async () => {
                                     await supabase.auth.signOut();
-                                    window.location.reload();
+                                    router.refresh();
                                 }}
                                 className="text-[10px] uppercase font-bold text-muted-foreground hover:text-red-400 transition-colors"
                             >
@@ -118,7 +184,7 @@ export default function BookingSummary() {
                 <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Finalizar</h2>
             </div>
 
-            <div className="siren-card !p-8 shadow-3xl space-y-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="siren-card !p-8 shadow-3xl space-y-8">
                 {selectedService?.image_url && (
                     <div className="w-full h-48 md:h-64 rounded-2xl overflow-hidden relative shadow-md border border-border/50">
                         <img src={selectedService.image_url} alt={selectedService.name} className="w-full h-full object-cover" />
@@ -150,11 +216,14 @@ export default function BookingSummary() {
                 <div className="space-y-2">
                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Notas (Opcional)</label>
                     <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
+                        {...register('notes')}
+                        onChange={(e) => {
+                            setNotes(e.target.value);
+                        }}
                         className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none h-14 resize-none text-sm"
                         placeholder="Ej: Tengo ojos sensibles..."
                     />
+                    {errors.notes && <p className="text-red-500 text-xs ml-1">{errors.notes.message}</p>}
                 </div>
 
                 {needsPhone && (
@@ -166,14 +235,16 @@ export default function BookingSummary() {
                         <label className="text-[10px] uppercase font-bold text-primary tracking-widest ml-1">Número de Teléfono (Requerido)</label>
                         <input
                             type="tel"
-                            required
                             maxLength={10}
-                            pattern="[0-9]{10}"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            {...register('phone')}
+                            onChange={(e) => {
+                                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                e.target.value = cleaned;
+                            }}
                             className="w-full p-4 rounded-2xl bg-primary/5 border border-primary/20 focus:border-primary transition-all outline-none text-sm font-bold"
                             placeholder="Ej: 6621234567"
                         />
+                        {errors.phone && <p className="text-red-500 text-xs ml-1">{errors.phone.message}</p>}
                         <p className="text-[9px] text-muted-foreground italic ml-1">Lo necesitamos para enviarte recordatorios de tu cita.</p>
                     </motion.div>
                 )}
@@ -184,54 +255,36 @@ export default function BookingSummary() {
                     <input 
                         type="text" 
                         id="website" 
-                        name="website" 
                         tabIndex={-1} 
                         autoComplete="off"
-                        value={honeypot}
-                        onChange={(e) => setHoneypot(e.target.value)}
+                        {...register('honeypot')}
                     />
                 </div>
 
+                {/* COMPLIANCE: Terms & Privacy acceptance */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                        type="checkbox"
+                        {...register('termsAccepted')}
+                        className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
+                    />
+                    <span className="text-[11px] text-muted-foreground leading-relaxed">
+                        Al reservar, acepto los{' '}
+                        <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
+                        {' '}y el{' '}
+                        <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
+                    </span>
+                </label>
+                {errors.termsAccepted && <p className="text-red-500 text-xs ml-7">{errors.termsAccepted.message}</p>}
+
                 <button
-                    onClick={async () => {
-                        if (!user) {
-                            alert("Sesión inválida. Por favor, vuelve al paso anterior o recarga la página para iniciar sesión.");
-                            return;
-                        }
-
-                        if (needsPhone) {
-                            if (!phone) {
-                                alert("Por favor, ingresa tu número de teléfono.");
-                                return;
-                            }
-                            if (phone.length < 10) {
-                                alert("El número de teléfono debe tener 10 dígitos obligatoriamente.");
-                                return;
-                            }
-                        }
-
-                        setIsSubmitting(true);
-                        // Anti-spam check
-                        if (honeypot.trim() !== '') {
-                            // Fake success after short delay to trick bots
-                            await new Promise(r => setTimeout(r, 800));
-                            setStep(6);
-                            setIsSubmitting(false);
-                            return;
-                        }
-
-                        const success = await createAppointment({ phone: needsPhone ? phone : undefined });
-                        if (success) setStep(6); // Go to success step (6)
-                        setIsSubmitting(false);
-                    }}
+                    type="submit"
                     disabled={isSubmitting}
-                    className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm shadow-xl shadow-primary/20"
+                    className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                     {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Confirmar y Reservar'}
                 </button>
-
-
-            </div>
+            </form>
         </motion.div>
     );
 }

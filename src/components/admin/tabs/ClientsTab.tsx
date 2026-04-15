@@ -1,18 +1,37 @@
 import { useState, useMemo } from 'react';
 import { Playfair_Display } from 'next/font/google';
-import { Mail, Phone, Calendar as CalendarIcon, CheckCircle, XCircle, Search, Users } from 'lucide-react';
+import { Phone, Calendar as CalendarIcon, CheckCircle, XCircle, Search, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import type { Appointment } from '@/types';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
+interface ClientData {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    totalAppointments: number;
+    completed: number;
+    cancelled: number;
+    pending: number;
+    lastVisit: Date | null;
+    servicesString: Set<string>;
+    services: string;
+    appointmentsHistory: Appointment[];
+    reliabilityScore?: number;
+}
+
 interface ClientsTabProps {
-    appointments: any[];
+    appointments: Appointment[];
 }
 
 export default function ClientsTab({ appointments }: ClientsTabProps) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedClient, setSelectedClient] = useState<any | null>(null);
+    const debouncedSearch = useDebounce(searchTerm, 300);
+    const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
 
     const clients = useMemo(() => {
         const clientsMap = new Map();
@@ -74,9 +93,9 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
     }, [appointments]);
 
     const filteredClients = clients.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone.toLowerCase().includes(searchTerm.toLowerCase())
+        c.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.email.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.phone.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     return (
@@ -210,8 +229,8 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-muted/30 border border-border p-4 rounded-2xl">
                                         <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-1">Fiabilidad</p>
-                                        <p className={cn("text-2xl font-black", selectedClient.reliabilityScore >= 80 ? "text-green-500" : selectedClient.reliabilityScore >= 50 ? "text-yellow-500" : "text-red-500")}>
-                                            {selectedClient.reliabilityScore}%
+                                        <p className={cn("text-2xl font-black", (selectedClient.reliabilityScore ?? 100) >= 80 ? "text-green-500" : (selectedClient.reliabilityScore ?? 100) >= 50 ? "text-yellow-500" : "text-red-500")}>
+                                            {selectedClient.reliabilityScore ?? 100}%
                                         </p>
                                     </div>
                                     <div className="bg-muted/30 border border-border p-4 rounded-2xl">
@@ -226,7 +245,7 @@ export default function ClientsTab({ appointments }: ClientsTabProps) {
                                 <div className="space-y-3">
                                     <p className="text-xs font-bold uppercase text-muted-foreground tracking-widest border-b border-border pb-2">Historial de Citas</p>
                                     <div className="space-y-3">
-                                        {selectedClient.appointmentsHistory.map((apt: any) => (
+                                        {selectedClient.appointmentsHistory.map((apt) => (
                                             <div key={apt.id} className="bg-card border border-border p-3 rounded-xl flex justify-between items-center relative overflow-hidden">
                                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20" />
                                                 <div className="pl-2">

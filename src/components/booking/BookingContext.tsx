@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Appointment, Service, Profile } from '@/types';
+import { logger } from '@/lib/logger';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface BookingContextType {
     step: number;
@@ -22,8 +24,8 @@ interface BookingContextType {
     notes: string;
     setNotes: (notes: string) => void;
 
-    user: any; // Keep any for raw Auth user from Supabase since it's deeply nested
-    setUser: (user: any) => void;
+    user: SupabaseUser | null;
+    setUser: (user: SupabaseUser | null) => void;
     userAppointments: Appointment[];
     fetchUserAppointments: () => void;
 
@@ -48,7 +50,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [notes, setNotes] = useState('');
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const [viewMode, setViewMode] = useState<'booking' | 'my-appointments'>('booking');
     const [toast, setToast] = useState<{ message: string, type: 'error' | 'success' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +67,15 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         const saved = localStorage.getItem('la-sirena-booking-state');
         if (saved) {
             try {
-                const parsed = JSON.parse(saved);
+                const parsed = JSON.parse(saved) as {
+                    _timestamp?: number;
+                    step?: number;
+                    selectedService?: Service;
+                    selectedStaff?: Profile;
+                    selectedDate?: string;
+                    selectedTime?: string;
+                    notes?: string;
+                };
                 // Only load if not too old (e.g., 2 hours)
                 const timestamp = parsed._timestamp || 0;
                 if (Date.now() - timestamp < 1000 * 60 * 60 * 2) {
@@ -77,7 +87,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
                     if (parsed.notes) setNotes(parsed.notes);
                 }
             } catch (e) {
-                console.error("Error loading booking state:", e);
+                logger.error("Error loading booking state:", e);
             }
         }
         setIsInitialized(true);
@@ -113,6 +123,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const { data: userAppointments = [], refetch } = useQuery<Appointment[]>({
         queryKey: ['userAppointments', user?.email],
         queryFn: async () => {
+            if (!user?.email) return [];
             const { data } = await supabase
                 .from('appointments')
                 .select('*, services(*)')
@@ -160,7 +171,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
 
         setIsSubmitting(false);
         if (error) {
-            console.error("DEBUG - Error al crear cita:", error, "Payload:", { service_id: selectedService.id, staff_id: selectedStaff.id, customer_email: user.email, customer_phone: customerPhone, appointment_date: appointmentDateStr, appointment_time: selectedTime });
+            logger.error("Error al crear cita:", error, "Payload:", { service_id: selectedService.id, staff_id: selectedStaff.id, customer_email: user.email, customer_phone: customerPhone, appointment_date: appointmentDateStr, appointment_time: selectedTime });
             const errorStr = JSON.stringify(error, Object.getOwnPropertyNames(error));
             if (error.code === '23505') {
                 setToast({ message: 'Ups, este horario acaba de ser reservado por alguien más. Por favor, elige otro.', type: 'error' });

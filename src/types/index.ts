@@ -54,6 +54,6 @@ export interface BusinessAvailabilityOverride {
 
 export interface BusinessSettings {
   key: string;
-  value: any;
+  value: string;
   updated_at: string;
 }

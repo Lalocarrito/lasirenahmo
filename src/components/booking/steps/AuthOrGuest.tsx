@@ -1,21 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2, ChevronLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { getSafeRedirectUrl } from '@/lib/safe-redirect';
+import { logger } from '@/lib/logger';
 import { useBooking } from '../BookingContext';
+import { toast } from 'sonner';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
 export default function AuthOrGuest() {
     const {
         setStep,
-        user, setUser,
-        setToast,
-        selectedService, selectedTime, notes,
+        user, setUser
     } = useBooking();
 
     // Auto-advance if user logged in (e.g. after Google redirect)
@@ -27,15 +29,17 @@ export default function AuthOrGuest() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin + '/#reservar' }
+            // SECURITY: Use allowlist-validated redirect URL
+            options: { redirectTo: getSafeRedirectUrl('/#reservar') }
         });
-        if (error) setToast({ message: error.message, type: 'error' });
+        if (error) toast.error(error.message);
     };
 
     const handleEmailAuth = async (e: React.FormEvent) => {
@@ -47,16 +51,22 @@ export default function AuthOrGuest() {
 
         setIsSubmitting(false);
         if (error) {
-            console.error("DEBUG - Error en Auth:", error);
             let msg = error.message;
-            if (msg.includes("Invalid login credentials")) msg = "No se encontró la cuenta o la contraseña es incorrecta.";
-            if (msg.includes("weak_password")) msg = "La contraseña es muy corta (mínimo 6 caracteres).";
-            if (msg.includes("User already registered")) msg = "Este correo ya está registrado. Por favor, inicia sesión.";
-            setToast({ message: msg, type: 'error' });
+            if (msg.includes("Invalid login credentials")) {
+                msg = "Contraseña incorrecta o cuenta no encontrada.";
+            } else if (msg.includes("weak_password")) {
+                msg = "La contraseña es muy corta (mínimo 6 caracteres).";
+            } else if (msg.includes("User already registered")) {
+                msg = "Este correo ya está registrado. Por favor, inicia sesión.";
+            } else {
+                logger.error("Error en Auth:", error);
+            }
+            
+            toast.error(msg);
         } else {
             const authUser = data.user;
             if (authUser) {
-                setToast({ message: isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!', type: 'success' });
+                toast.success(isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!');
                 setUser(authUser);
 
                 // Small delay to ensure state updates before moving
@@ -82,16 +92,16 @@ export default function AuthOrGuest() {
             <div className="siren-card !p-8 shadow-3xl">
                 <div className="flex p-1.5 bg-muted/30 rounded-2xl mb-8 border border-border/50">
                     <button
-                        onClick={() => setIsLogin(true)}
-                        className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", isLogin ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
-                    >
-                        Login
-                    </button>
-                    <button
                         onClick={() => setIsLogin(false)}
                         className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", !isLogin ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
                     >
                         Registro
+                    </button>
+                    <button
+                        onClick={() => setIsLogin(true)}
+                        className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", isLogin ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
+                    >
+                        Iniciar Sesión
                     </button>
                 </div>
 
@@ -116,10 +126,29 @@ export default function AuthOrGuest() {
                             required
                         />
                     </div>
+
+                    {/* Privacy checkbox — registration only */}
+                    {!isLogin && (
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={acceptedTerms}
+                                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
+                            />
+                            <span className="text-[11px] text-muted-foreground leading-relaxed">
+                                Acepto los{' '}
+                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
+                                {' '}y el{' '}
+                                <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
+                            </span>
+                        </label>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={isSubmitting}
-                        className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm shadow-xl shadow-primary/20"
+                        disabled={isSubmitting || (!isLogin && !acceptedTerms)}
+                        className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
                     </button>

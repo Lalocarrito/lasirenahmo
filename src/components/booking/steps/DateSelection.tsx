@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { ChevronLeft, Clock, CalendarOff } from 'lucide-react';
+import { Clock, CalendarOff } from 'lucide-react';
 import { addDays, startOfDay, isSameDay, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import type { BusinessAvailability, BusinessAvailabilityOverride } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
@@ -19,8 +20,8 @@ export default function DateSelection() {
         user, setStep, prevStep
     } = useBooking();
 
-    const [businessAvailability, setBusinessAvailability] = useState<any[]>([]);
-    const [overrides, setOverrides] = useState<any[]>([]);
+    const [businessAvailability, setBusinessAvailability] = useState<BusinessAvailability[]>([]);
+    const [overrides, setOverrides] = useState<BusinessAvailabilityOverride[]>([]);
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
     useEffect(() => {
@@ -199,7 +200,7 @@ export default function DateSelection() {
     );
 }
 
-function DayCarousel({ selectedDate, onSelect, overrides }: { selectedDate: Date | null, onSelect: (d: Date) => void, overrides: any[] }) {
+function DayCarousel({ selectedDate, onSelect, overrides }: { selectedDate: Date | null, onSelect: (d: Date) => void, overrides: BusinessAvailabilityOverride[] }) {
     const today = startOfDay(new Date());
     
     // Generate next 30 days

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Playfair_Display } from 'next/font/google';
 import {
     LayoutDashboard,
@@ -8,7 +9,6 @@ import {
     Users,
     Settings,
     LogOut,
-    Plus,
     Loader2,
     Moon,
     Sun,
@@ -18,11 +18,12 @@ import { addDays, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
+import { AnimatePresence } from 'framer-motion';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-import { Appointment, Service, BusinessAvailability, BusinessAvailabilityOverride, Profile } from '@/types';
+import { Appointment, Service, BusinessAvailability, Profile } from '@/types';
 
 import OverviewTab from '@/components/admin/tabs/OverviewTab';
 import AppointmentsTab from '@/components/admin/tabs/AppointmentsTab';
@@ -35,7 +36,12 @@ import StaffTab from '@/components/admin/tabs/StaffTab';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
-const TABS = [
+interface TabConfig {
+    name: string;
+    icon: React.ComponentType<{ size?: number }>;
+}
+
+const TABS: TabConfig[] = [
     { name: 'Overview', icon: LayoutDashboard },
     { name: 'Citas', icon: Calendar },
     { name: 'Clientes', icon: Users },
@@ -44,7 +50,16 @@ const TABS = [
     { name: 'Disponibilidad', icon: Settings },
 ];
 
+/** Shape of data passed to handleSaveService */
+interface ServiceFormData {
+    name: string;
+    price: number;
+    description: string;
+    duration: string;
+}
+
 export default function AdminDashboard() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState('Overview');
     const [editingService, setEditingService] = useState<Service | null>(null);
     const [managingAppointment, setManagingAppointment] = useState<Appointment | null>(null);
@@ -53,7 +68,7 @@ export default function AdminDashboard() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isProfileLoading, setIsProfileLoading] = useState(true);
 
-    const { theme, setTheme, resolvedTheme } = useTheme();
+    const { resolvedTheme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
     const queryClient = useQueryClient();
@@ -93,7 +108,7 @@ export default function AdminDashboard() {
             const { data: { session } } = await supabase.auth.getSession();
             
             if (!session) {
-                window.location.href = '/admin';
+                router.replace('/admin');
                 return;
             }
 
@@ -104,8 +119,8 @@ export default function AdminDashboard() {
                 .single();
 
             if (error || !profileData || (profileData.role !== 'admin' && profileData.role !== 'staff')) {
-                console.error("Unauthorized access attempt:", error);
-                window.location.href = '/';
+                logger.error("Unauthorized access attempt:", error);
+                router.replace('/');
                 return;
             }
 
@@ -117,7 +132,7 @@ export default function AdminDashboard() {
         checkAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_OUT') window.location.href = '/admin';
+            if (event === 'SIGNED_OUT') router.replace('/admin');
             if (event === 'SIGNED_IN' && session) {
                 checkAuth();
             }
@@ -138,14 +153,14 @@ export default function AdminDashboard() {
             subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
-    }, [queryClient]);
+    }, [queryClient, router]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        window.location.href = '/admin';
+        router.replace('/admin');
     };
 
-    const handleSaveService = async (data: any) => {
+    const handleSaveService = async (data: ServiceFormData) => {
         if (!editingService) return;
         setIsLoading(true);
 
@@ -191,7 +206,7 @@ export default function AdminDashboard() {
             // Revert on error manually (by invalidating to refetch true state)
             queryClient.invalidateQueries({ queryKey: ['appointments'] });
             setManagingAppointment(previousManagingAppointment);
-            console.error("DEBUG - Error updating appointment status:", error);
+            logger.error("Error updating appointment status:", error);
             toast.error("Hubo un error al actualizar el estado de la cita. Las credenciales o los permisos pueden estar fallando.");
         } else if (!data || data.length === 0) {
             // RLS blocked it
@@ -218,7 +233,7 @@ export default function AdminDashboard() {
 
         if (error) {
             queryClient.invalidateQueries({ queryKey: ['availability'] });
-            console.error("DEBUG - Error updating availability:", error);
+            logger.error("Error updating availability:", error);
         } else {
             fetchData();
         }
@@ -239,7 +254,7 @@ export default function AdminDashboard() {
 
         if (error) {
             queryClient.invalidateQueries({ queryKey: ['availability'] });
-            console.error("DEBUG - Error adding availability:", error);
+            logger.error("Error adding availability:", error);
         } else {
             fetchData();
         }
@@ -256,7 +271,7 @@ export default function AdminDashboard() {
 
         if (error) {
             queryClient.invalidateQueries({ queryKey: ['availability'] });
-            console.error("DEBUG - Error deleting availability:", error);
+            logger.error("Error deleting availability:", error);
         } else {
             fetchData();
         }
@@ -277,7 +292,7 @@ export default function AdminDashboard() {
             }]);
 
             if (error) {
-                console.error("DEBUG - Error updating override:", error);
+                logger.error("Error updating override:", error);
                 toast.error("Error al actualizar la fecha específica.");
             }
         }
@@ -316,7 +331,7 @@ export default function AdminDashboard() {
         setIsUploading(false);
     };
 
-    const handleFrequentAppointment = async (appointment: any, days: number) => {
+    const handleFrequentAppointment = async (appointment: Appointment, days: number) => {
         setIsLoading(true);
         const nextDate = addDays(new Date(appointment.appointment_date + 'T00:00:00'), days);
 
@@ -330,7 +345,7 @@ export default function AdminDashboard() {
         }]);
 
         if (error) {
-            console.error("DEBUG - Error al reagendar:", error);
+            logger.error("Error al reagendar:", error);
             toast.error("No se pudo reagendar. Verifica la disponibilidad o conexión con Supabase.");
         } else {
             toast.success("Cita reagendada con éxito");

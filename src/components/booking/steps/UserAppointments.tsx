@@ -1,18 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { ArrowRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { ArrowRight, Calendar as CalendarIcon, Clock, Loader2 } from 'lucide-react';
 import { isAfter, isBefore, endOfDay, parseISO, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import ConfirmModal from '@/components/admin/modals/ConfirmModal';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
 export default function UserAppointments() {
     const { userAppointments, setViewMode, fetchUserAppointments, setToast } = useBooking();
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
     const upcomingAppointments = userAppointments.filter(apt => apt.status !== 'cancelled' && isAfter(endOfDay(parseISO(apt.appointment_date)), new Date())).slice().reverse();
     const pastOrCancelledAppointments = userAppointments.filter(apt => apt.status === 'cancelled' || isBefore(endOfDay(parseISO(apt.appointment_date)), new Date()));
@@ -21,18 +25,22 @@ export default function UserAppointments() {
     const otherUpcoming = upcomingAppointments.slice(1);
 
     const handleCancelAppointment = async (id: string) => {
-        if (!confirm("¿Estás segura de que deseas cancelar esta cita?")) return;
+        setCancellingId(id);
         try {
             const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id);
             if (error) throw error;
             setToast({ message: "Cita cancelada con éxito", type: 'success' });
             fetchUserAppointments();
-        } catch (error: any) {
-            setToast({ message: `No se pudo cancelar: ${error.message || 'Error desconocido'}`, type: 'error' });
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'Error desconocido';
+            setToast({ message: `No se pudo cancelar: ${msg}`, type: 'error' });
+        } finally {
+            setCancellingId(null);
         }
     };
 
     return (
+        <>
         <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
             className="max-w-4xl mx-auto px-4 py-8"
@@ -86,9 +94,11 @@ export default function UserAppointments() {
                                             {nextAppointment.status === 'confirmed' ? '✓ Confirmada' : '⏳ Pendiente'}
                                         </div>
                                         <button
-                                            onClick={() => handleCancelAppointment(nextAppointment.id)}
-                                            className="text-xs font-bold uppercase text-white/50 hover:text-white hover:underline transition-all mt-2"
+                                            onClick={() => setConfirmModal({ isOpen: true, id: nextAppointment.id })}
+                                            disabled={cancellingId === nextAppointment.id}
+                                            className="text-xs font-bold uppercase text-white/50 hover:text-white hover:underline transition-all mt-2 flex items-center gap-2 disabled:opacity-30"
                                         >
+                                            {cancellingId === nextAppointment.id && <Loader2 size={14} className="animate-spin" />}
                                             Cancelar Cita
                                         </button>
                                     </div>
@@ -115,9 +125,11 @@ export default function UserAppointments() {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => handleCancelAppointment(apt.id)}
-                                            className="text-[10px] w-fit font-bold uppercase text-red-500/60 hover:text-red-500 transition-all"
+                                            onClick={() => setConfirmModal({ isOpen: true, id: apt.id })}
+                                            disabled={cancellingId === apt.id}
+                                            className="text-[10px] w-fit font-bold uppercase text-red-500/60 hover:text-red-500 transition-all flex items-center gap-1 disabled:opacity-30"
                                         >
+                                            {cancellingId === apt.id && <Loader2 size={12} className="animate-spin" />}
                                             Cancelar
                                         </button>
                                     </div>
@@ -154,5 +166,16 @@ export default function UserAppointments() {
                 </div>
             )}
         </motion.div>
+
+        <ConfirmModal
+            isOpen={confirmModal.isOpen}
+            title="Cancelar Cita"
+            message="¿Estás segura de que deseas cancelar esta cita? Esta acción no se puede deshacer."
+            onConfirm={() => {
+                if (confirmModal.id) handleCancelAppointment(confirmModal.id);
+            }}
+            onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+        />
+        </>
     );
 }

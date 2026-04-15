@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Calendar, Loader2, Users } from 'lucide-react';
 import { Playfair_Display } from 'next/font/google';
 import { cn } from '@/lib/utils';
+import type { Appointment } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 interface ManageAppointmentModalProps {
-    appointment: any;
+    appointment: Appointment;
     onClose: () => void;
     onUpdateStatus: (id: string, status: string) => void;
-    onFrequentAppointment: (appointment: any, days: number) => void;
+    onFrequentAppointment: (appointment: Appointment, days: number) => void;
     isLoading: boolean;
 }
 

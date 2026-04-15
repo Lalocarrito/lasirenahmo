@@ -1,21 +1,29 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Loader2, Upload } from 'lucide-react';
 import { Playfair_Display } from 'next/font/google';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { useEffect } from 'react';
+import type { Service } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
+interface ServiceFormData {
+    name: string;
+    price: number;
+    description: string;
+    duration: string;
+}
+
 interface ServiceModalProps {
-    service: any;
+    service: Service;
     onClose: () => void;
-    onSave: (data: any) => void;
+    onSave: (data: ServiceFormData) => void;
     onUploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    setService: (service: any) => void;
+    setService: (service: Service | null) => void;
     isLoading: boolean;
     isUploading: boolean;
 }

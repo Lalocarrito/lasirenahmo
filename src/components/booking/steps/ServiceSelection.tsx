@@ -3,21 +3,22 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import type { Service } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
 export default function ServiceSelection() {
     const { setSelectedService, nextStep } = useBooking();
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const [isLoadingServices, setIsLoadingServices] = useState(true);
 
     useEffect(() => {
         const fetchServices = async () => {
             const { data } = await supabase.from('services').select('*').order('price', { ascending: false });
-            setServices(data || []);
+            setServices((data || []) as Service[]);
             setIsLoadingServices(false);
         };
         fetchServices();
@@ -39,6 +40,14 @@ export default function ServiceSelection() {
                     [1, 2, 3, 4].map(i => (
                         <div key={i} className="h-64 w-full bg-muted/50 animate-pulse rounded-3xl" />
                     ))
+                ) : services.length === 0 ? (
+                    <div className="col-span-full py-20 text-center space-y-4">
+                        <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto">
+                            <Sparkles size={36} className="text-primary/30" />
+                        </div>
+                        <h3 className={`${playfair.className} text-2xl text-foreground`}>Próximamente</h3>
+                        <p className="text-muted-foreground text-sm max-w-xs mx-auto">Estamos preparando nuestro catálogo de servicios. ¡Vuelve pronto!</p>
+                    </div>
                 ) : services.map((service) => (
                     <button
                         key={service.id}

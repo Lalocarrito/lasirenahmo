@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { getSafeRedirectUrl } from '@/lib/safe-redirect';
+import { logger } from '@/lib/logger';
 import { Playfair_Display } from 'next/font/google';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
@@ -15,6 +18,7 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+    const router = useRouter();
     const [isLogin, setIsLogin] = useState(true);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [email, setEmail] = useState('');
@@ -33,13 +37,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         e.preventDefault();
         setIsLoading(true);
 
-        const { error, data } = isLogin
+        const { error } = isLogin
             ? await supabase.auth.signInWithPassword({ email, password })
             : await supabase.auth.signUp({ email, password });
 
         setIsLoading(false);
         if (error) {
-            console.error("DEBUG - Error en Auth:", error);
+            logger.error("Error en Auth:", error);
             let msg = error.message;
             if (msg.includes("Invalid login credentials")) msg = "No se encontró la cuenta o la contraseña es incorrecta.";
             if (msg.includes("weak_password")) msg = "La contraseña es muy corta (mínimo 6 caracteres).";
@@ -49,7 +53,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             setToast({ message: isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!', type: 'success' });
             setTimeout(() => {
                 onClose();
-                window.location.reload();
+                router.refresh();
             }, 1000);
         }
     };
@@ -58,7 +62,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         e.preventDefault();
         setIsLoading(true);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + '/admin?reset=true',
+            // SECURITY: Use allowlist-validated redirect URL
+            redirectTo: getSafeRedirectUrl('/admin?reset=true'),
         });
         setIsLoading(false);
         if (error) {
@@ -72,7 +77,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin }
+            // SECURITY: Use allowlist-validated redirect URL
+            options: { redirectTo: getSafeRedirectUrl('/') }
         });
         if (error) setToast({ message: error.message, type: 'error' });
     };
@@ -165,7 +171,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm"
+                                    className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
                                         isForgotPassword ? 'Enviar correo de recuperación' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')

@@ -10,10 +10,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import ConfirmModal from '../modals/ConfirmModal';
 
+import type { Appointment, Service } from '@/types';
+
 interface AppointmentsTabProps {
-    appointments: any[];
-    services: any[];
-    setManagingAppointment: (appointment: any) => void;
+    appointments: Appointment[];
+    services: Service[];
+    setManagingAppointment: (appointment: Appointment) => void;
     handleUpdateStatus: (id: string, status: string) => void;
     fetchData: (loader?: boolean) => void;
 }
@@ -45,7 +47,7 @@ export default function AppointmentsTab({
     const displayedAppointments = view === 'upcoming' ? upcomingAppointments : pastAppointments;
 
     // Grouping for visual display
-    const grouped = displayedAppointments.reduce((acc: Record<string, any[]>, curr) => {
+    const grouped = displayedAppointments.reduce((acc: Record<string, Appointment[]>, curr) => {
         if (!acc[curr.appointment_date]) acc[curr.appointment_date] = [];
         acc[curr.appointment_date].push(curr);
         return acc;

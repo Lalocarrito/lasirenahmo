@@ -3,12 +3,13 @@
 import { Playfair_Display } from 'next/font/google';
 import { Calendar, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { Appointment } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 interface OverviewTabProps {
-    appointments: any[];
-    setManagingAppointment: (appointment: any) => void;
+    appointments: Appointment[];
+    setManagingAppointment: (appointment: Appointment) => void;
     setActiveTab: (tab: string) => void;
 }
 

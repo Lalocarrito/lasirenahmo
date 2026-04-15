@@ -3,7 +3,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
 import { useEffect } from 'react';
-import { CheckCircle, Users, LogOut, Calendar, ChevronLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle, LogOut, Calendar, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingProvider, useBooking } from './booking/BookingContext';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +20,7 @@ import UserAppointments from './booking/steps/UserAppointments';
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
 function BookingFlowContent() {
+    const router = useRouter();
     const { step, setStep, viewMode, setViewMode, user, toast } = useBooking();
 
     useEffect(() => {
@@ -59,6 +61,11 @@ function BookingFlowContent() {
         }
     };
 
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.refresh();
+    };
+
     return (
         <div className="w-full max-w-4xl mx-auto px-4 py-12">
             {/* Header & Navigation */}
@@ -73,10 +80,7 @@ function BookingFlowContent() {
                                 <Calendar size={14} /> Mis Citas
                             </button>
                             <button
-                                onClick={async () => {
-                                    await supabase.auth.signOut();
-                                    window.location.reload();
-                                }}
+                                onClick={handleSignOut}
                                 className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
                                 title="Cerrar Sesión"
                             >

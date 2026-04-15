@@ -44,8 +44,12 @@ export default function StaffSelection() {
             </div>
 
             {staffList.length === 0 ? (
-                <div className="text-center py-10">
-                    <p className="text-muted-foreground">No hay profesionales disponibles en este momento.</p>
+                <div className="py-20 text-center space-y-4">
+                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto">
+                        <User size={36} className="text-primary/30" />
+                    </div>
+                    <h3 className={cn("text-2xl text-foreground", playfair.className)}>Sin profesionales</h3>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto">No hay profesionales registrados en este momento. Intenta de nuevo más tarde.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -4,9 +4,10 @@ import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Profile } from '@/types';
-import { Loader2, Shield, User, UserCheck, Search, ImagePlus } from 'lucide-react';
+import { Loader2, Shield, UserCheck, Search, ImagePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export default function StaffTab() {
     const queryClient = useQueryClient();
@@ -53,7 +54,7 @@ export default function StaffTab() {
             setSearchTerm('');
             toast.success('Rol actualizado con éxito');
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast.error(`Error: ${error.message}`);
         },
         onSettled: () => {
@@ -88,8 +89,8 @@ export default function StaffTab() {
             
             toast.success('Foto de perfil actualizada exitosamente');
             queryClient.invalidateQueries({ queryKey: ['staff-profiles'] });
-        } catch (error: any) {
-            console.error(error);
+        } catch (error: unknown) {
+            logger.error(error);
             toast.error("Error al subir la foto. Asegúrate de que el Bucket 'avatars' esté configurado.");
         } finally {
             setUploadingAvatar(null);

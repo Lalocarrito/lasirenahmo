@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "sonner";
+import CookieConsent from "@/components/CookieConsent";
 
 const outfit = Outfit({
   variable: "--font-body",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             {children}
             <Toaster position="bottom-right" theme="system" richColors />
+            <CookieConsent />
           </ThemeProvider>
         </QueryProvider>
       </body>
