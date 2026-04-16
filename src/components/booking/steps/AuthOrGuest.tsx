@@ -35,6 +35,7 @@ export default function AuthOrGuest() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+    const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             // SECURITY: Using server-side callback for PKCE code exchange.
