@@ -37,8 +37,8 @@ export default function AuthOrGuest() {
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            // SECURITY: Use allowlist-validated redirect URL. Removed fragment to prevent OAuth token parsing issues.
-            options: { redirectTo: getSafeRedirectUrl('/') }
+            // SECURITY: Using server-side callback for PKCE code exchange.
+            options: { redirectTo: getSafeRedirectUrl('/auth/callback') }
         });
         if (error) toast.error(error.message);
     };
