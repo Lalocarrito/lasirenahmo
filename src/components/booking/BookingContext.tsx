@@ -72,9 +72,11 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         loadServices();
     }, []);
 
-    // Load from localStorage on mount
+    // Load from sessionStorage on mount.
+    // sessionStorage survives page reloads within the same tab (e.g. OAuth redirect)
+    // but is NOT shared across tabs — new tabs always start from step 1.
     useEffect(() => {
-        const saved = localStorage.getItem('la-sirena-booking-state');
+        const saved = sessionStorage.getItem('la-sirena-booking-state');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -116,13 +118,14 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 setUser(session.user);
-                // Standard Next.js pattern: refresh the router to sync server components with client cookies
                 if (event === 'SIGNED_IN') {
                     router.refresh();
                 }
             } else {
                 setUser(null);
                 if (event === 'SIGNED_OUT') {
+                    // Clear booking state so next login starts fresh
+                    sessionStorage.removeItem('la-sirena-booking-state');
                     router.refresh();
                 }
             }
@@ -131,7 +134,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         return () => subscription.unsubscribe();
     }, [router]);
 
-    // Save to localStorage on changes
+    // Save to sessionStorage on changes
     useEffect(() => {
         if (!isInitialized) return;
         const stateToSave = {
@@ -139,7 +142,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             selectedDate: bookingState.selectedDate?.toISOString(),
             _timestamp: Date.now()
         };
-        localStorage.setItem('la-sirena-booking-state', JSON.stringify(stateToSave));
+        sessionStorage.setItem('la-sirena-booking-state', JSON.stringify(stateToSave));
     }, [bookingState, isInitialized]);
 
     const setStep = useCallback((step: number) => setBookingState(prev => ({ ...prev, step })), []);
@@ -194,7 +197,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     };
 
     const resetBooking = useCallback(() => {
-        localStorage.removeItem('la-sirena-booking-state');
+        sessionStorage.removeItem('la-sirena-booking-state');
         setBookingState({
             step: 1,
             selectedService: null,

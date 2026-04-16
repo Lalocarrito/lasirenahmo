@@ -21,7 +21,6 @@ function BookingFlowContent() {
     const router = useRouter();
     const { step, setStep, user } = useBooking();
     
-    console.log('Rendering BookingFlowContent, step:', step);
 
     const isInitialMount1 = useRef(true);
 
