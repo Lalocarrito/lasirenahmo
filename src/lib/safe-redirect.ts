@@ -5,8 +5,8 @@
  */
 
 const ALLOWED_REDIRECT_ORIGINS: string[] = [
-    // Add production domain(s) here
     'https://lasirenahmo.com',
+    'https://www.lasirenahmo.com',
 ];
 
 /**
@@ -18,13 +18,12 @@ export function getSafeRedirectUrl(path: string = '/'): string {
 
     const origin = window.location.origin;
 
-    // In development, always allow localhost
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-        return `${origin}${path}`;
-    }
+    // In development and testing (Localhost, Vercel Previews, Production with/without WWW)
+    const isLocalhost = origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
+    const isVercel = origin.endsWith('.vercel.app');
+    const isProduction = ALLOWED_REDIRECT_ORIGINS.includes(origin);
 
-    // In production, enforce allowlist
-    if (ALLOWED_REDIRECT_ORIGINS.includes(origin)) {
+    if (isLocalhost || isVercel || isProduction) {
         return `${origin}${path}`;
     }
 

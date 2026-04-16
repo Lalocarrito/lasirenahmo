@@ -96,6 +96,29 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         setIsInitialized(true);
     }, []);
 
+    // FAIL-SAFE: Handle Auth Code Exchange on mount (in case redirect lands here)
+    useEffect(() => {
+        const handleAuthCode = async () => {
+            if (typeof window === 'undefined') return;
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            
+            if (code) {
+                console.log('Fail-safe: Exchange code found on mount, processing...');
+                const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                if (!error && data.user) {
+                    setUser(data.user);
+                    // Clear URL params for a cleaner UX
+                    const newUrl = window.location.pathname + window.location.hash;
+                    window.history.replaceState({}, '', newUrl);
+                } else if (error) {
+                    console.error('Fail-safe: Exchange error:', error.message);
+                }
+            }
+        };
+        handleAuthCode();
+    }, []);
+
     // Save to localStorage on changes
     useEffect(() => {
         if (!isInitialized) return;
