@@ -25,20 +25,22 @@ function BookingFlowContent() {
 
     const isInitialMount1 = useRef(true);
 
-    // Auto-scroll al encabezado cuando cambia el paso
+    // Auto-scroll al encabezado cuando cambia el paso o al retomar reserva
     useEffect(() => {
+        const isResuming = isInitialMount1.current && (step > 1 || (user && step >= 4));
+        
         if (isInitialMount1.current) {
             isInitialMount1.current = false;
-            return;
+            if (!isResuming) return;
         }
 
-        // Siempre subir al inicio del componente de reserva al cambiar de paso
+        // Siempre subir al inicio del componente de reserva al cambiar de paso o al retomar
         const el = document.getElementById('booking-flow-header');
         if (el) {
             const y = el.getBoundingClientRect().top + window.scrollY - 100;
             window.scrollTo({ top: y, behavior: 'smooth' });
         }
-    }, [step]);
+    }, [step, user]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();

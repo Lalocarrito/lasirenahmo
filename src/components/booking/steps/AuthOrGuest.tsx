@@ -35,11 +35,10 @@ export default function AuthOrGuest() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-    const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            // SECURITY: Use allowlist-validated redirect URL
-            options: { redirectTo: getSafeRedirectUrl('/#reservar') }
+            // SECURITY: Use allowlist-validated redirect URL. Removed fragment to prevent OAuth token parsing issues.
+            options: { redirectTo: getSafeRedirectUrl('/') }
         });
         if (error) toast.error(error.message);
     };
