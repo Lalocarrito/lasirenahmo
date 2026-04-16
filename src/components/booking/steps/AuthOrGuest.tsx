@@ -30,9 +30,19 @@ export default function AuthOrGuest() {
             const params = new URLSearchParams(window.location.search);
             if (params.get('code')) {
                 setIsVerifying(true);
+                // Safety timeout: if after 5 seconds we don't have a user, stop loading
+                const timer = setTimeout(() => setIsVerifying(false), 5000);
+                return () => clearTimeout(timer);
             }
         }
-    }, []);
+    }, [user]);
+
+    // Clear verification when user arrives
+    useEffect(() => {
+        if (user) {
+            setIsVerifying(false);
+        }
+    }, [user]);
 
     // Auto-advance if user logged in (e.g. after Google redirect)
     useEffect(() => {

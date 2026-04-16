@@ -9,6 +9,16 @@ import { NextResponse, type NextRequest } from 'next/server';
  * - Cannot be bypassed from the client.
  */
 export async function middleware(request: NextRequest) {
+    const host = request.headers.get('host');
+    const url = request.nextUrl.clone();
+
+    // Canonical Domain: Redirect lasirenahmo.com to www.lasirenahmo.com
+    // Only apply in production environment when not on a vercel preview/localhost
+    if (host === 'lasirenahmo.com') {
+        url.host = 'www.lasirenahmo.com';
+        return NextResponse.redirect(url, 301);
+    }
+
     let response = NextResponse.next({
         request: {
             headers: request.headers,
