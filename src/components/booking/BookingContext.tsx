@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Service, Profile } from '@/types';
 import { logger } from '@/lib/logger';
@@ -96,6 +97,40 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         setIsInitialized(true);
     }, []);
 
+    const router = useRouter();
+
+    // Aggressive initial session detection
+    useEffect(() => {
+        const checkInitialSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUser(session.user);
+            } else {
+                const { data: { user } } = await supabase.auth.getUser();
+                setUser(user ?? null);
+            }
+        };
+
+        checkInitialSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                setUser(session.user);
+                // Standard Next.js pattern: refresh the router to sync server components with client cookies
+                if (event === 'SIGNED_IN') {
+                    router.refresh();
+                }
+            } else {
+                setUser(null);
+                if (event === 'SIGNED_OUT') {
+                    router.refresh();
+                }
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [router]);
+
     // FAIL-SAFE: Handle Auth Code Exchange on mount (in case redirect lands here)
     useEffect(() => {
         const handleAuthCode = async () => {
@@ -108,6 +143,8 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
                 const { data, error } = await supabase.auth.exchangeCodeForSession(code);
                 if (!error && data.user) {
                     setUser(data.user);
+                    // Sync cookies with server instantly
+                    router.refresh();
                     // Clear URL params for a cleaner UX
                     const newUrl = window.location.pathname + window.location.hash;
                     window.history.replaceState({}, '', newUrl);
@@ -117,7 +154,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             }
         };
         handleAuthCode();
-    }, []);
+    }, [router]);
 
     // Save to localStorage on changes
     useEffect(() => {
@@ -129,23 +166,6 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         };
         localStorage.setItem('la-sirena-booking-state', JSON.stringify(stateToSave));
     }, [bookingState, isInitialized]);
-
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUser(user ?? null);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session) {
-                const { data: { user } } = await supabase.auth.getUser();
-                setUser(user ?? null);
-            } else {
-                setUser(null);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
 
     const setStep = useCallback((step: number) => setBookingState(prev => ({ ...prev, step })), []);
     const setSelectedService = useCallback((selectedService: Service | null) => setBookingState(prev => ({ ...prev, selectedService })), []);
