@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
 import { Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
