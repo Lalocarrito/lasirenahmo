@@ -12,7 +12,7 @@ import { Playfair_Display } from 'next/font/google';
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 export default function StaffSelection() {
-    const { setSelectedStaff, selectedStaff, nextStep, prevStep } = useBooking();
+    const { setSelectedStaff, selectedStaff, setSelectedTime, nextStep, prevStep } = useBooking();
 
     const { data: staffList = [], isLoading } = useQuery<Profile[]>({
         queryKey: ['staff'],
@@ -58,6 +58,7 @@ export default function StaffSelection() {
                             key={staff.id}
                             onClick={() => {
                                 setSelectedStaff(staff);
+                                setSelectedTime('');
                                 nextStep();
                             }}
                             className={cn(
@@ -83,7 +84,15 @@ export default function StaffSelection() {
                 </div>
             )}
 
-
+            <div className="pt-8 flex justify-center">
+                <button
+                    onClick={prevStep}
+                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                >
+                    <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                    Volver a servicios
+                </button>
+            </div>
         </motion.div>
     );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { getSafeRedirectUrl } from '@/lib/safe-redirect';
@@ -17,6 +17,7 @@ const playfair = Playfair_Display({ subsets: ['latin'] });
 export default function AuthOrGuest() {
     const {
         setStep,
+        prevStep,
         user, setUser
     } = useBooking();
 
@@ -156,13 +157,22 @@ export default function AuthOrGuest() {
 
                 <button
                     onClick={handleGoogleLogin}
-                    className="w-full mt-4 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
+                    className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
                 >
                     <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
                     Continuar con Google
                 </button>
-            </div>
 
+                <div className="mt-8 pt-6 border-t border-border/50 flex justify-center">
+                    <button
+                        onClick={prevStep}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                    >
+                        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        Volver a fecha y hora
+                    </button>
+                </div>
+            </div>
         </motion.div>
     );
 }

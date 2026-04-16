@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Clock, CalendarOff } from 'lucide-react';
+import { Clock, CalendarOff, ChevronLeft } from 'lucide-react';
 import { addDays, startOfDay, isSameDay, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,21 @@ import { useBooking } from '../BookingContext';
 import type { BusinessAvailability, BusinessAvailabilityOverride } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
+
+// Helper to normalize time strings for comparison (handles "9:00 AM", "09:00 AM", "09:00:00", etc)
+const standardizeTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    const parts = timeStr.trim().toUpperCase().split(' ');
+    const [time, period] = parts;
+    const [hStr, mStr] = time.split(':');
+    let h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    
+    if (period === 'PM' && h < 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
 
 export default function DateSelection() {
     const {
@@ -54,13 +69,13 @@ export default function DateSelection() {
         }
 
         const calculateSlots = async () => {
-            const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+            const appointmentDateStr = format(selectedDate, 'yyyy-MM-dd');
 
             // 1. Fetch existing appointments for this date and staff
             let apptQuery = supabase
                 .from('appointments')
                 .select('appointment_time')
-                .eq('appointment_date', dateStr)
+                .eq('appointment_date', appointmentDateStr)
                 .neq('status', 'cancelled');
 
             if (selectedStaff) {
@@ -69,9 +84,9 @@ export default function DateSelection() {
 
             const { data: existingAppts } = await apptQuery;
 
-            const bookedTimes = (existingAppts || []).map(a => a.appointment_time);
+            const bookedTimes = (existingAppts || []).map(a => standardizeTime(a.appointment_time));
 
-            const override = overrides.find(o => o.override_date === dateStr);
+            const override = overrides.find(o => o.override_date === appointmentDateStr);
             let dayConfigs = [];
 
             if (override) {
@@ -106,10 +121,11 @@ export default function DateSelection() {
                 while (currentH < endH || (currentH === endH && currentM < endM)) {
                     const period = currentH >= 12 ? 'PM' : 'AM';
                     const displayH = currentH > 12 ? currentH - 12 : (currentH === 0 ? 12 : currentH);
-                    const slot = `${String(displayH).padStart(2, '0')}:${String(currentM).padStart(2, '0')} ${period}`;
+                    const slot = `${displayH}:${String(currentM).padStart(2, '0')} ${period}`;
 
-                    // Only add the slot if it's not already booked
-                    if (!allSlots.includes(slot) && !bookedTimes.includes(slot)) {
+                    // Only add the slot if it's not already booked (normalized comparison)
+                    const normalizedSlot = standardizeTime(slot);
+                    if (!allSlots.includes(slot) && !bookedTimes.includes(normalizedSlot)) {
                         allSlots.push(slot);
                     }
 
@@ -125,7 +141,7 @@ export default function DateSelection() {
         };
 
         calculateSlots();
-    }, [selectedDate, businessAvailability, overrides]);
+    }, [selectedDate, selectedStaff, businessAvailability, overrides]);
 
     useEffect(() => {
         if (selectedDate) {
@@ -193,7 +209,16 @@ export default function DateSelection() {
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    <div className="pt-12 flex justify-center">
+                        <button
+                            onClick={prevStep}
+                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                        >
+                            <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                            Volver a profesional
+                        </button>
+                    </div>
+                </motion.div>
                 )}
             </div>
         </motion.div>

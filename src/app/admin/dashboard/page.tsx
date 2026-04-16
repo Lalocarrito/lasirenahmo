@@ -105,9 +105,9 @@ export default function AdminDashboard() {
         setMounted(true);
         
         const checkAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { user } } = await supabase.auth.getUser();
             
-            if (!session) {
+            if (!user) {
                 router.replace('/admin');
                 return;
             }
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
             const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('id', session.user.id)
+                .eq('id', user.id)
                 .single();
 
             if (error || !profileData || (profileData.role !== 'admin' && profileData.role !== 'staff')) {
@@ -360,10 +360,8 @@ export default function AdminDashboard() {
             {/* Sidebar */}
             <aside className="w-full md:w-64 bg-card border-b md:border-r border-border p-6 flex flex-col gap-8 z-50">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                        <LayoutDashboard size={20} />
-                    </div>
-                    <span className={`${playfair.className} text-xl tracking-tight`}>Sirena Admin</span>
+                    <img src="/icon1.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg border border-primary/10 object-cover" />
+                    <span className={`${playfair.className} text-xl tracking-tight text-primary`}>La <span className="italic">Sirena</span></span>
                 </div>
 
                 <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">

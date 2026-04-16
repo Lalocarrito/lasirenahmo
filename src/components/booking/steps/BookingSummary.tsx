@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
-import { Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import { Loader2, Sparkles, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
 import { useForm } from 'react-hook-form';
@@ -32,13 +33,13 @@ type BookingSummaryFormData = z.infer<typeof bookingSummarySchema>;
 export default function BookingSummary() {
     const router = useRouter();
     const {
-        step, setStep,
+        step, setStep, prevStep,
         selectedService, selectedStaff, selectedDate, selectedTime,
         notes, setNotes,
         user,
         createAppointment,
+        resetBooking,
         isSubmitting, setIsSubmitting,
-        setToast,
     } = useBooking();
 
     const needsPhone = user && !user.user_metadata?.phone;
@@ -53,7 +54,7 @@ export default function BookingSummary() {
         })
         : bookingSummarySchema;
 
-    const { register, handleSubmit, formState: { errors }, watch } = useForm<BookingSummaryFormData>({
+    const { register, handleSubmit, formState: { errors } } = useForm<BookingSummaryFormData>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             phone: '',
@@ -65,7 +66,7 @@ export default function BookingSummary() {
 
     const onSubmit = async (data: BookingSummaryFormData) => {
         if (!user) {
-            setToast({ message: 'Sesión inválida. Por favor, vuelve al paso anterior para iniciar sesión.', type: 'error' });
+            toast.error('Sesión inválida. Por favor, vuelve al paso anterior para iniciar sesión.');
             return;
         }
 
@@ -96,9 +97,8 @@ export default function BookingSummary() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="max-w-md mx-auto text-center"
             >
-                <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-10 relative">
-                    <Sparkles size={64} className="text-primary animate-pulse" />
-                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-10 relative shadow-xl overflow-hidden border-4 border-primary/20">
+                    <img src="/icon1.png" alt="La Sirena Logo" className="w-full h-full object-cover" />
                 </div>
                 <h2 className={`${playfair.className} text-5xl mb-6 italic`}>¡Reserva Guardada!</h2>
                 <div className="bg-card w-full p-6 rounded-3xl border border-border/50 text-left mb-10 shadow-lg shadow-black/5 space-y-4">
@@ -141,16 +141,25 @@ export default function BookingSummary() {
 
                 <div className="space-y-4">
                     <button
-                        onClick={() => {
-                            setStep(1);
-                        }}
+                        onClick={resetBooking}
                         className="w-full siren-button !py-5 shadow-2xl shadow-primary/20"
                     >
                         Agendar otro servicio
                     </button>
+
                     <div className="pt-6 border-t border-border flex flex-col gap-4">
+                        <Link 
+                            href="/perfil"
+                            className="text-center p-4 rounded-2xl bg-primary/5 text-primary border border-primary/20 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all"
+                        >
+                            Ver mis citas
+                        </Link>
+
                         <button
-                            onClick={() => router.refresh()}
+                            onClick={() => {
+                                resetBooking();
+                                router.refresh();
+                            }}
                             className="text-xs font-bold uppercase tracking-[0.3em] text-primary hover:underline transition-all"
                         >
                             Volver al inicio
@@ -180,7 +189,7 @@ export default function BookingSummary() {
             exit={{ opacity: 0, y: -30 }}
             className="max-w-xl mx-auto"
         >
-            <div className="text-center mb-6">
+            <div className="text-center mb-10">
                 <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Finalizar</h2>
             </div>
 
@@ -284,6 +293,20 @@ export default function BookingSummary() {
                 >
                     {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Confirmar y Reservar'}
                 </button>
+
+                <div className="pt-4 flex justify-center border-t border-border/30">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (user) setStep(3);
+                            else prevStep();
+                        }}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                    >
+                        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        {user ? 'Volver a fecha y hora' : 'Volver a mis datos'}
+                    </button>
+                </div>
             </form>
         </motion.div>
     );

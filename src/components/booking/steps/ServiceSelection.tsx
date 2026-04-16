@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Playfair_Display } from 'next/font/google';
+import { playfair } from '@/lib/fonts';
 import { ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
 import type { Service } from '@/types';
 
-const playfair = Playfair_Display({ subsets: ['latin'] });
+
 
 export default function ServiceSelection() {
     const { setSelectedService, nextStep } = useBooking();

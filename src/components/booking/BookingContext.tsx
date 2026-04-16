@@ -2,9 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { Appointment, Service, Profile } from '@/types';
+import { Service, Profile } from '@/types';
 import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface BookingContextType {
@@ -26,16 +27,9 @@ interface BookingContextType {
 
     user: SupabaseUser | null;
     setUser: (user: SupabaseUser | null) => void;
-    userAppointments: Appointment[];
-    fetchUserAppointments: () => void;
-
-    viewMode: 'booking' | 'my-appointments';
-    setViewMode: (mode: 'booking' | 'my-appointments') => void;
-
-    toast: { message: string, type: 'error' | 'success' } | null;
-    setToast: (toast: { message: string, type: 'error' | 'success' } | null) => void;
 
     createAppointment: (extraData?: { phone?: string }) => Promise<boolean>;
+    resetBooking: () => void;
     isSubmitting: boolean;
     setIsSubmitting: (val: boolean) => void;
 }
@@ -51,16 +45,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [user, setUser] = useState<SupabaseUser | null>(null);
-    const [viewMode, setViewMode] = useState<'booking' | 'my-appointments'>('booking');
-    const [toast, setToast] = useState<{ message: string, type: 'error' | 'success' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [toast]);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -109,32 +94,21 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     }, [step, selectedService, selectedStaff, selectedDate, selectedTime, notes, isInitialized]);
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user ?? null);
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session) {
+                const { data: { user } } = await supabase.auth.getUser();
+                setUser(user ?? null);
+            } else {
+                setUser(null);
+            }
         });
 
         return () => subscription.unsubscribe();
     }, []);
-
-    const { data: userAppointments = [], refetch } = useQuery<Appointment[]>({
-        queryKey: ['userAppointments', user?.email],
-        queryFn: async () => {
-            if (!user?.email) return [];
-            const { data } = await supabase
-                .from('appointments')
-                .select('*, services(*)')
-                .eq('customer_email', user.email)
-                .order('appointment_date', { ascending: false });
-            return (data || []) as Appointment[];
-        },
-        enabled: !!user && viewMode === 'my-appointments',
-    });
-
-    const fetchUserAppointments = () => refetch();
 
     const nextStep = () => setStep(prev => prev + 1);
     const prevStep = () => setStep(prev => prev - 1);
@@ -142,7 +116,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const createAppointment = async (extraData?: { phone?: string }) => {
         if (!selectedService || !selectedStaff || !selectedDate || !selectedTime || !user) return false;
 
-        const appointmentDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        const appointmentDateStr = format(selectedDate, 'yyyy-MM-dd');
 
         const customerPhone = extraData?.phone || user.user_metadata?.phone || '';
 
@@ -164,23 +138,54 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             // Also sync it to auth metadata so next loads detect it immediately
             await supabase.auth.updateUser({ data: { phone: extraData.phone } });
             
-            // Re-fetch session to update local user state
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) setUser(session.user);
+            // Re-fetch user to update local state
+            const { data: { user: updatedUser } } = await supabase.auth.getUser();
+            if (updatedUser) setUser(updatedUser);
         }
 
         setIsSubmitting(false);
         if (error) {
-            logger.error("Error al crear cita:", error, "Payload:", { service_id: selectedService.id, staff_id: selectedStaff.id, customer_email: user.email, customer_phone: customerPhone, appointment_date: appointmentDateStr, appointment_time: selectedTime });
-            const errorStr = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            const errorDetails = {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint,
+                status: (error as any).status
+            };
+            
+            logger.error("Error al crear cita (Servidor):", JSON.stringify(errorDetails, null, 2));
+            
+            const payload = { 
+                service_id: selectedService?.id, 
+                staff_id: selectedStaff?.id, 
+                customer_email: user?.email, 
+                customer_phone: customerPhone, 
+                appointment_date: appointmentDateStr, 
+                appointment_time: selectedTime 
+            };
+            logger.error("Payload enviado:", JSON.stringify(payload, null, 2));
+
             if (error.code === '23505') {
-                setToast({ message: 'Ups, este horario acaba de ser reservado por alguien más. Por favor, elige otro.', type: 'error' });
+                toast.error('Ups, este horario ya está reservado. Por favor elige otro.');
+            } else if (error.code === 'P0001') {
+                toast.error('Límite de citas excedido: ' + error.message);
             } else {
-                setToast({ message: `Error (${error?.code || 'Desconocido'}): ${error?.message || errorStr}`, type: 'error' });
+                toast.error(`Error de reserva (${error.code || '?'})`);
             }
             return false;
         }
         return true;
+    };
+
+    const resetBooking = () => {
+        setStep(1);
+        setSelectedService(null);
+        setSelectedStaff(null);
+        setSelectedDate(null);
+        setSelectedTime('');
+        setNotes('');
+        setIsSubmitting(false);
+        localStorage.removeItem('la-sirena-booking-state');
     };
 
     return (
@@ -193,10 +198,8 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
                 selectedTime, setSelectedTime,
                 notes, setNotes,
                 user, setUser,
-                userAppointments, fetchUserAppointments,
-                viewMode, setViewMode,
-                toast, setToast,
                 createAppointment,
+                resetBooking,
                 isSubmitting, setIsSubmitting
             }}
         >

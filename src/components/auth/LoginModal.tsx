@@ -8,9 +8,11 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { getSafeRedirectUrl } from '@/lib/safe-redirect';
 import { logger } from '@/lib/logger';
-import { Playfair_Display } from 'next/font/google';
+import { playfair } from '@/lib/fonts';
+import { toast } from 'sonner';
+import Link from 'next/link';
 
-const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
+
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -24,14 +26,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [toast, setToast] = useState<{ message: string, type: 'error' | 'success' } | null>(null);
-
-    useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [toast]);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,14 +38,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         setIsLoading(false);
         if (error) {
-            logger.error("Error en Auth:", error);
             let msg = error.message;
-            if (msg.includes("Invalid login credentials")) msg = "No se encontró la cuenta o la contraseña es incorrecta.";
-            if (msg.includes("weak_password")) msg = "La contraseña es muy corta (mínimo 6 caracteres).";
-            if (msg.includes("User already registered")) msg = "Este correo ya está registrado. Por favor, inicia sesión.";
-            setToast({ message: msg, type: 'error' });
+            if (msg.includes("Invalid login credentials")) {
+                msg = "Contraseña incorrecta o cuenta no encontrada.";
+            } else if (msg.includes("weak_password")) {
+                msg = "La contraseña es muy corta (mínimo 6 caracteres).";
+            } else if (msg.includes("User already registered")) {
+                msg = "Este correo ya está registrado. Por favor, inicia sesión.";
+            } else {
+                logger.error("Error en Auth:", error);
+            }
+            toast.error(msg);
         } else {
-            setToast({ message: isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!', type: 'success' });
+            toast.success(isLogin ? '¡Bienvenida de nuevo!' : '¡Cuenta creada!');
             setTimeout(() => {
                 onClose();
                 router.refresh();
@@ -67,9 +67,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         });
         setIsLoading(false);
         if (error) {
-            setToast({ message: error.message, type: 'error' });
+            toast.error(error.message);
         } else {
-            setToast({ message: 'Se ha enviado un correo para restablecer tu contraseña.', type: 'success' });
+            toast.success('Se ha enviado un correo para restablecer tu contraseña.');
             setTimeout(() => setIsForgotPassword(false), 2000);
         }
     };
@@ -80,7 +80,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             // SECURITY: Use allowlist-validated redirect URL
             options: { redirectTo: getSafeRedirectUrl('/') }
         });
-        if (error) setToast({ message: error.message, type: 'error' });
+        if (error) toast.error(error.message);
     };
 
     return (
@@ -114,18 +114,18 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         </div>
 
                         {!isForgotPassword && (
-                            <div className="flex p-1 bg-muted/30 rounded-2xl mb-8 border border-border/50">
-                                <button
-                                    onClick={() => { setIsLogin(true); setIsForgotPassword(false); }}
-                                    className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", (isLogin && !isForgotPassword) ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
-                                >
-                                    Login
-                                </button>
+                            <div className="flex p-1.5 bg-muted/30 rounded-2xl mb-8 border border-border/50">
                                 <button
                                     onClick={() => { setIsLogin(false); setIsForgotPassword(false); }}
                                     className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", (!isLogin && !isForgotPassword) ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
                                 >
                                     Registro
+                                </button>
+                                <button
+                                    onClick={() => { setIsLogin(true); setIsForgotPassword(false); }}
+                                    className={cn("flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all", (isLogin && !isForgotPassword) ? "bg-card shadow-lg text-primary" : "text-muted-foreground")}
+                                >
+                                    Iniciar Sesión
                                 </button>
                             </div>
                         )}
@@ -168,9 +168,27 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                             )}
 
                             <div className="space-y-4">
+                                {/* Privacy checkbox — registration only */}
+                                {!isLogin && !isForgotPassword && (
+                                    <label className="flex items-start gap-3 cursor-pointer group pb-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={acceptedTerms}
+                                            onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                            className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
+                                        />
+                                        <span className="text-[11px] text-muted-foreground leading-relaxed text-left">
+                                            Acepto los{' '}
+                                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
+                                            {' '}y el{' '}
+                                            <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
+                                        </span>
+                                    </label>
+                                )}
+
                                 <button
                                     type="submit"
-                                    disabled={isLoading}
+                                    disabled={isLoading || (!isLogin && !isForgotPassword && !acceptedTerms)}
                                     className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
@@ -192,38 +210,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                         {!isForgotPassword && (
                             <>
-                                <div className="relative py-8">
-                                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/50"></div></div>
-                                    <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.3em]"><span className="bg-card px-4 text-muted-foreground/40">Ó</span></div>
-                                </div>
-
                                 <button
                                     onClick={handleGoogleLogin}
-                                    className="w-full p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-[10px] uppercase tracking-widest hover:bg-muted/30 transition-all"
+                                    className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
                                 >
-                                    <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="" />
-                                    Entrar con Google
+                                    <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
+                                    Continuar con Google
                                 </button>
                             </>
                         )}
 
-                        {/* Toast inside modal */}
-                        <AnimatePresence>
-                            {toast && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    className={cn(
-                                        "absolute bottom-4 left-4 right-4 p-4 rounded-2xl shadow-xl flex items-center gap-3 text-white text-xs font-bold z-10",
-                                        toast.type === 'error' ? "bg-red-500" : "bg-primary"
-                                    )}
-                                >
-                                    {toast.type === 'success' && <CheckCircle size={16} />}
-                                    {toast.message}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </motion.div>
                 </div>
             )}
