@@ -20,6 +20,8 @@ import Link from 'next/link';
 function BookingFlowContent() {
     const router = useRouter();
     const { step, setStep, user } = useBooking();
+    
+    console.log('Rendering BookingFlowContent, step:', step);
 
     const isInitialMount1 = useRef(true);
 
@@ -29,21 +31,12 @@ function BookingFlowContent() {
             isInitialMount1.current = false;
             return;
         }
-        const header = document.getElementById('booking-flow-header');
-        if (header) {
-            setTimeout(() => {
-                header.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 150);
-        }
-    }, [step]);
 
-    useEffect(() => {
-        if (step > 1) {
-            const el = document.getElementById('booking-step-content');
-            if (el) {
-                const y = el.getBoundingClientRect().top + window.scrollY - 100; // Account for navbar height
-                window.scrollTo({ top: y, behavior: 'smooth' });
-            }
+        // Siempre subir al inicio del componente de reserva al cambiar de paso
+        const el = document.getElementById('booking-flow-header');
+        if (el) {
+            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top: y, behavior: 'smooth' });
         }
     }, [step]);
 
@@ -72,34 +65,21 @@ function BookingFlowContent() {
                 </div>
             </div>
 
-            <div id="booking-step-content">
-                <AnimatePresence mode="wait">
-                    {step === 1 && (
-                        <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <ServiceSelection />
-                        </motion.div>
-                    )}
-                    {step === 2 && (
-                        <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <StaffSelection />
-                        </motion.div>
-                    )}
-                    {step === 3 && (
-                        <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <DateSelection />
-                        </motion.div>
-                    )}
-                    {step === 4 && (
-                        <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <AuthOrGuest />
-                        </motion.div>
-                    )}
-                    {(step === 5 || step === 6) && (
-                        <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                            <BookingSummary />
-                        </motion.div>
-                    )}
-
+            <div id="booking-step-content" className="relative min-h-[400px]">
+                <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                    >
+                        {step === 1 && <ServiceSelection />}
+                        {step === 2 && <StaffSelection />}
+                        {step === 3 && <DateSelection />}
+                        {step === 4 && <AuthOrGuest />}
+                        {(step === 5 || step === 6) && <BookingSummary />}
+                    </motion.div>
                 </AnimatePresence>
             </div>
         </div>

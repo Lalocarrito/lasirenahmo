@@ -70,6 +70,8 @@ export default function DateSelection() {
 
         const calculateSlots = async () => {
             const appointmentDateStr = format(selectedDate, 'yyyy-MM-dd');
+            const now = new Date();
+            const isToday = isSameDay(selectedDate, now);
 
             // 1. Fetch existing appointments for this date and staff
             let apptQuery = supabase
@@ -123,9 +125,23 @@ export default function DateSelection() {
                     const displayH = currentH > 12 ? currentH - 12 : (currentH === 0 ? 12 : currentH);
                     const slot = `${displayH}:${String(currentM).padStart(2, '0')} ${period}`;
 
-                    // Only add the slot if it's not already booked (normalized comparison)
+                    // Validation: Not already booked AND (If today, must be in the future)
                     const normalizedSlot = standardizeTime(slot);
-                    if (!allSlots.includes(slot) && !bookedTimes.includes(normalizedSlot)) {
+                    let isForward = true;
+                    
+                    if (isToday) {
+                        const [slotH, slotM] = normalizedSlot.split(':').map(Number);
+                        const currentH_now = now.getHours();
+                        const currentM_now = now.getMinutes();
+                        
+                        // Buffer: don't allow booking for current hour if it's already late in that hour?
+                        // For now strictly later than current time.
+                        if (slotH < currentH_now || (slotH === currentH_now && slotM <= currentM_now)) {
+                            isForward = false;
+                        }
+                    }
+
+                    if (!allSlots.includes(slot) && !bookedTimes.includes(normalizedSlot) && isForward) {
                         allSlots.push(slot);
                     }
 

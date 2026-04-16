@@ -154,27 +154,6 @@ export default function BookingSummary() {
                         >
                             Ver mis citas
                         </Link>
-
-                        <button
-                            onClick={() => {
-                                resetBooking();
-                                router.refresh();
-                            }}
-                            className="text-xs font-bold uppercase tracking-[0.3em] text-primary hover:underline transition-all"
-                        >
-                            Volver al inicio
-                        </button>
-                        {user && (
-                            <button
-                                onClick={async () => {
-                                    await supabase.auth.signOut();
-                                    router.refresh();
-                                }}
-                                className="text-[10px] uppercase font-bold text-muted-foreground hover:text-red-400 transition-colors"
-                            >
-                                Cerrar sesión
-                            </button>
-                        )}
                     </div>
                 </div>
             </motion.div>

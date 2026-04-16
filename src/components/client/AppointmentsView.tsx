@@ -17,16 +17,25 @@ export default function AppointmentsView({ userEmail }: { userEmail: string }) {
     const [cancellingId, setCancellingId] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
-    const { data: userAppointments = [], refetch, isLoading } = useQuery<Appointment[]>({
+    const { data: userAppointments = [], refetch, isLoading, isError, error } = useQuery<Appointment[]>({
         queryKey: ['userAppointments', userEmail],
         queryFn: async () => {
-            const { data } = await supabase
+            if (!userEmail) return [];
+            const { data, error } = await supabase
                 .from('appointments')
                 .select('*, services(*)')
                 .eq('customer_email', userEmail)
                 .order('appointment_date', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching appointments:', error);
+                throw error;
+            }
             return (data || []) as Appointment[];
         },
+        enabled: !!userEmail,
+        staleTime: 1000 * 60, // 1 minute
+        retry: 2
     });
 
     const upcomingAppointments = userAppointments.filter(apt => apt.status !== 'cancelled' && isAfter(endOfDay(parseISO(apt.appointment_date)), new Date())).slice().reverse();
@@ -56,8 +65,19 @@ export default function AppointmentsView({ userEmail }: { userEmail: string }) {
             className="w-full"
         >
             {isLoading ? (
-                <div className="flex justify-center items-center py-20 px-4">
+                <div className="flex justify-center items-center py-20 px-4 flex-col gap-4">
                     <Loader2 className="animate-spin text-primary opacity-50" size={32} />
+                    <p className="text-xs text-muted-foreground animate-pulse">Cargando tus citas...</p>
+                </div>
+            ) : isError ? (
+                <div className="text-center py-24 glass-card bg-red-500/5 rounded-3xl border-red-500/20 border-2">
+                    <p className="text-sm text-red-500 font-bold mb-4">No pudimos cargar tus citas</p>
+                    <button 
+                        onClick={() => refetch()}
+                        className="siren-button !py-2 !px-6 text-[10px]"
+                    >
+                        Reintentar
+                    </button>
                 </div>
             ) : userAppointments.length === 0 ? (
                 <div className="text-center py-24 glass-card italic text-muted-foreground bg-muted/20 rounded-3xl border-dashed border-2">

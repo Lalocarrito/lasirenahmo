@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Service, Profile } from '@/types';
 import { logger } from '@/lib/logger';
@@ -32,47 +32,65 @@ interface BookingContextType {
     resetBooking: () => void;
     isSubmitting: boolean;
     setIsSubmitting: (val: boolean) => void;
+    availableServices: Service[];
+    isLoadingServices: boolean;
+    loadServices: () => Promise<void>;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export function BookingProvider({ children, initialStep = 1 }: { children: ReactNode, initialStep?: number }) {
-    const [step, setStep] = useState(initialStep);
+    const [bookingState, setBookingState] = useState({
+        step: initialStep,
+        selectedService: null as Service | null,
+        selectedStaff: null as Profile | null,
+        selectedDate: null as Date | null,
+        selectedTime: '',
+        notes: '',
+        isSubmitting: false,
+    });
+
     const [isInitialized, setIsInitialized] = useState(false);
-    const [selectedService, setSelectedService] = useState<Service | null>(null);
-    const [selectedStaff, setSelectedStaff] = useState<Profile | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [selectedTime, setSelectedTime] = useState<string>('');
-    const [notes, setNotes] = useState('');
     const [user, setUser] = useState<SupabaseUser | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [availableServices, setAvailableServices] = useState<Service[]>([]);
+    const [isLoadingServices, setIsLoadingServices] = useState(true);
+
+    const loadServices = async () => {
+        setIsLoadingServices(true);
+        try {
+            const { data } = await supabase.from('services').select('*').order('price', { ascending: false });
+            setAvailableServices((data || []) as Service[]);
+        } catch (e) {
+            console.error('Error fetching services in provider:', e);
+        } finally {
+            setIsLoadingServices(false);
+        }
+    };
+
+    useEffect(() => {
+        loadServices();
+    }, []);
 
     // Load from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem('la-sirena-booking-state');
         if (saved) {
             try {
-                const parsed = JSON.parse(saved) as {
-                    _timestamp?: number;
-                    step?: number;
-                    selectedService?: Service;
-                    selectedStaff?: Profile;
-                    selectedDate?: string;
-                    selectedTime?: string;
-                    notes?: string;
-                };
-                // Only load if not too old (e.g., 2 hours)
+                const parsed = JSON.parse(saved);
                 const timestamp = parsed._timestamp || 0;
                 if (Date.now() - timestamp < 1000 * 60 * 60 * 2) {
-                    if (parsed.step) setStep(parsed.step);
-                    if (parsed.selectedService) setSelectedService(parsed.selectedService);
-                    if (parsed.selectedStaff) setSelectedStaff(parsed.selectedStaff);
-                    if (parsed.selectedDate) setSelectedDate(new Date(parsed.selectedDate));
-                    if (parsed.selectedTime) setSelectedTime(parsed.selectedTime);
-                    if (parsed.notes) setNotes(parsed.notes);
+                    setBookingState(prev => ({
+                        ...prev,
+                        step: parsed.step || 1,
+                        selectedService: parsed.selectedService || null,
+                        selectedStaff: parsed.selectedStaff || null,
+                        selectedDate: parsed.selectedDate ? new Date(parsed.selectedDate) : null,
+                        selectedTime: parsed.selectedTime || '',
+                        notes: parsed.notes || '',
+                    }));
                 }
             } catch (e) {
-                logger.error("Error loading booking state:", e);
+                console.error("Error loading booking state:", e);
             }
         }
         setIsInitialized(true);
@@ -81,17 +99,13 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     // Save to localStorage on changes
     useEffect(() => {
         if (!isInitialized) return;
-        const state = {
-            step,
-            selectedService,
-            selectedStaff,
-            selectedDate: selectedDate?.toISOString(),
-            selectedTime,
-            notes,
+        const stateToSave = {
+            ...bookingState,
+            selectedDate: bookingState.selectedDate?.toISOString(),
             _timestamp: Date.now()
         };
-        localStorage.setItem('la-sirena-booking-state', JSON.stringify(state));
-    }, [step, selectedService, selectedStaff, selectedDate, selectedTime, notes, isInitialized]);
+        localStorage.setItem('la-sirena-booking-state', JSON.stringify(stateToSave));
+    }, [bookingState, isInitialized]);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -110,14 +124,22 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         return () => subscription.unsubscribe();
     }, []);
 
-    const nextStep = () => setStep(prev => prev + 1);
-    const prevStep = () => setStep(prev => prev - 1);
+    const setStep = useCallback((step: number) => setBookingState(prev => ({ ...prev, step })), []);
+    const setSelectedService = useCallback((selectedService: Service | null) => setBookingState(prev => ({ ...prev, selectedService })), []);
+    const setSelectedStaff = useCallback((selectedStaff: Profile | null) => setBookingState(prev => ({ ...prev, selectedStaff })), []);
+    const setSelectedDate = useCallback((selectedDate: Date | null) => setBookingState(prev => ({ ...prev, selectedDate })), []);
+    const setSelectedTime = useCallback((selectedTime: string) => setBookingState(prev => ({ ...prev, selectedTime })), []);
+    const setNotes = useCallback((notes: string) => setBookingState(prev => ({ ...prev, notes })), []);
+    const setIsSubmitting = useCallback((isSubmitting: boolean) => setBookingState(prev => ({ ...prev, isSubmitting })), []);
+
+    const nextStep = useCallback(() => setBookingState(prev => ({ ...prev, step: prev.step + 1 })), []);
+    const prevStep = useCallback(() => setBookingState(prev => ({ ...prev, step: prev.step - 1 })), []);
 
     const createAppointment = async (extraData?: { phone?: string }) => {
+        const { selectedService, selectedStaff, selectedDate, selectedTime, notes } = bookingState;
         if (!selectedService || !selectedStaff || !selectedDate || !selectedTime || !user) return false;
 
         const appointmentDateStr = format(selectedDate, 'yyyy-MM-dd');
-
         const customerPhone = extraData?.phone || user.user_metadata?.phone || '';
 
         const { error } = await supabase.from('appointments').insert({
@@ -133,38 +155,14 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         });
 
         if (!error && extraData?.phone) {
-            // Update profile with the new phone if provided
             await supabase.from('profiles').update({ phone: extraData.phone }).eq('id', user.id);
-            // Also sync it to auth metadata so next loads detect it immediately
             await supabase.auth.updateUser({ data: { phone: extraData.phone } });
-            
-            // Re-fetch user to update local state
             const { data: { user: updatedUser } } = await supabase.auth.getUser();
             if (updatedUser) setUser(updatedUser);
         }
 
         setIsSubmitting(false);
         if (error) {
-            const errorDetails = {
-                message: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint,
-                status: (error as any).status
-            };
-            
-            logger.error("Error al crear cita (Servidor):", JSON.stringify(errorDetails, null, 2));
-            
-            const payload = { 
-                service_id: selectedService?.id, 
-                staff_id: selectedStaff?.id, 
-                customer_email: user?.email, 
-                customer_phone: customerPhone, 
-                appointment_date: appointmentDateStr, 
-                appointment_time: selectedTime 
-            };
-            logger.error("Payload enviado:", JSON.stringify(payload, null, 2));
-
             if (error.code === '23505') {
                 toast.error('Ups, este horario ya está reservado. Por favor elige otro.');
             } else if (error.code === 'P0001') {
@@ -177,32 +175,45 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         return true;
     };
 
-    const resetBooking = () => {
-        setStep(1);
-        setSelectedService(null);
-        setSelectedStaff(null);
-        setSelectedDate(null);
-        setSelectedTime('');
-        setNotes('');
-        setIsSubmitting(false);
+    const resetBooking = useCallback(() => {
         localStorage.removeItem('la-sirena-booking-state');
-    };
+        setBookingState({
+            step: 1,
+            selectedService: null,
+            selectedStaff: null,
+            selectedDate: null,
+            selectedTime: '',
+            notes: '',
+            isSubmitting: false,
+        });
+    }, []);
 
     return (
-        <BookingContext.Provider
-            value={{
-                step, setStep, nextStep, prevStep,
-                selectedService, setSelectedService,
-                selectedStaff, setSelectedStaff,
-                selectedDate, setSelectedDate,
-                selectedTime, setSelectedTime,
-                notes, setNotes,
-                user, setUser,
-                createAppointment,
-                resetBooking,
-                isSubmitting, setIsSubmitting
-            }}
-        >
+        <BookingContext.Provider value={{
+            step: bookingState.step,
+            setStep,
+            nextStep,
+            prevStep,
+            selectedService: bookingState.selectedService,
+            setSelectedService,
+            selectedStaff: bookingState.selectedStaff,
+            setSelectedStaff,
+            selectedDate: bookingState.selectedDate,
+            setSelectedDate,
+            selectedTime: bookingState.selectedTime,
+            setSelectedTime,
+            notes: bookingState.notes,
+            setNotes,
+            user,
+            setUser,
+            createAppointment,
+            resetBooking,
+            isSubmitting: bookingState.isSubmitting,
+            setIsSubmitting,
+            availableServices,
+            isLoadingServices,
+            loadServices,
+        }}>
             {children}
         </BookingContext.Provider>
     );
