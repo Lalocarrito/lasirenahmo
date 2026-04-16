@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -41,6 +41,14 @@ export default function BookingSummary() {
         resetBooking,
         isSubmitting, setIsSubmitting,
     } = useBooking();
+
+    // Guard: if the user signs out while on this step, send them back to login (step 4).
+    // BookingSummary always requires an active session.
+    useEffect(() => {
+        if (!user && (step === 5 || step === 6)) {
+            setStep(4);
+        }
+    }, [user, step, setStep]);
 
     const needsPhone = user && !user.user_metadata?.phone;
 

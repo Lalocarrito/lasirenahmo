@@ -77,8 +77,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            // SECURITY: Use allowlist-validated redirect URL
-            options: { redirectTo: getSafeRedirectUrl('/') }
+            // Must use /auth/callback for server-side PKCE code exchange (same as booking flow)
+            options: { redirectTo: getSafeRedirectUrl('/auth/callback') }
         });
         if (error) toast.error(error.message);
     };
