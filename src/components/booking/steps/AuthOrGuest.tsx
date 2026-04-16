@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
 import { Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,29 +22,9 @@ export default function AuthOrGuest() {
         user, setUser
     } = useBooking();
 
-    const [isVerifying, setIsVerifying] = useState(false);
-
-    // Initial check for pending auth code in URL
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('code')) {
-                setIsVerifying(true);
-                // Safety timeout: if after 5 seconds we don't have a user, stop loading
-                const timer = setTimeout(() => setIsVerifying(false), 5000);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [user]);
-
-    // Clear verification when user arrives
-    useEffect(() => {
-        if (user) {
-            setIsVerifying(false);
-        }
-    }, [user]);
-
-    // Auto-advance if user logged in (e.g. after Google redirect)
+    // Auto-advance when user session is established (e.g. after Google redirect)
+    // The /auth/callback route sets the cookie, router.refresh() in BookingContext
+    // fires the onAuthStateChange SIGNED_IN event, which sets the user here.
     useEffect(() => {
         if (user && step === 4) {
             setStep(5);
@@ -113,23 +93,7 @@ export default function AuthOrGuest() {
                 <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Tu Cuenta</h2>
             </div>
 
-            <div className="siren-card !p-8 shadow-3xl relative overflow-hidden">
-                {/* Auth Verification Loader Overlay */}
-                <AnimatePresence>
-                    {(isVerifying && !user) && (
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm"
-                        >
-                            <Loader2 className="animate-spin text-primary mb-4" size={40} />
-                            <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-primary animate-pulse">
-                                Verificando sesión...
-                            </p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+            <div className="siren-card !p-8 shadow-3xl">
 
                 <div className="flex p-1.5 bg-muted/30 rounded-2xl mb-8 border border-border/50">
                     <button

@@ -1,46 +1,48 @@
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
 /**
  * SECURITY: Server-side Auth Callback Route (PKCE Flow).
- * 1. Extracts the 'code' voucher from the URL (returned by Google/Supabase).
- * 2. Exchanges the code for a permanent authenticated session via the Supabase Auth API.
- * 3. Sets the security cookies (httpOnly, Secure) for the browser.
- * 4. Redirects the user back to the home page or a specific target.
+ * 
+ * This route receives the `code` from Supabase/Google after OAuth,
+ * exchanges it for a session, and writes the auth cookies into the
+ * browser via next/headers — the only correct way to persist auth
+ * state in a Next.js Route Handler with @supabase/ssr.
  */
 export async function GET(request: NextRequest) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
-    // 'next' allows us to redirect to a specific page after login if desired
     const next = searchParams.get('next') ?? '/';
 
     if (code) {
+        const cookieStore = await cookies();
+
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
                     getAll() {
-                        return request.cookies.getAll();
+                        return cookieStore.getAll();
                     },
                     setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value }) =>
-                            request.cookies.set(name, value)
-                        );
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            cookieStore.set(name, value, options);
+                        });
                     },
                 },
             }
         );
 
         const { error } = await supabase.auth.exchangeCodeForSession(code);
-        
+
         if (!error) {
-            // Success: session is now set in cookies.
-            // Using the origin ensures we stay on the same domain (security).
+            // Session is now persisted in cookies. Redirect to the target page.
             return NextResponse.redirect(`${origin}${next}`);
         }
     }
 
-    // Fallback: return the user to the home page with an error state if the code is invalid.
+    // Code missing or exchange failed — redirect home with error flag
     return NextResponse.redirect(`${origin}/?auth_error=true`);
 }
