@@ -107,10 +107,16 @@ USING (role = 'staff' OR role = 'admin');
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Cualquiera puede crear citas" ON appointments;
-CREATE POLICY "Cualquiera puede crear citas"
-ON appointments FOR INSERT
-TO public
-WITH CHECK (true);
+CREATE POLICY "Insert citas con email válido"
+ON appointments FOR INSERT TO public
+WITH CHECK (
+    auth.uid() IS NOT NULL
+    OR (
+        customer_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+        AND length(customer_name) BETWEEN 2 AND 100
+        AND customer_phone ~ '^[+]?[0-9\s()\-.]{7,20}$'
+    )
+);
 
 DROP POLICY IF EXISTS "Staff y Admins pueden ver citas" ON appointments;
 CREATE POLICY "Staff y Admins pueden ver citas"

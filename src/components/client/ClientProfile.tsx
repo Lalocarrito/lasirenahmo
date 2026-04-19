@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, User, Crown, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, User, Crown, LogOut } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { playfair } from '@/lib/fonts';
 
 // Views
@@ -15,9 +16,18 @@ import LoyaltyView from './LoyaltyView';
 type TabType = 'appointments' | 'settings' | 'loyalty';
 
 export default function ClientProfile({ userEmail }: { userEmail: string }) {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('appointments');
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-    const tabs: { id: TabType; label: string; icon: React.FC<any> }[] = [
+    const handleSignOut = async () => {
+        setIsLoggingOut(true);
+        await supabase.auth.signOut();
+        router.push('/');
+        router.refresh();
+    };
+
+    const tabs: { id: TabType; label: string; icon: typeof CalendarIcon }[] = [
         { id: 'appointments', label: 'Mis Citas', icon: CalendarIcon },
         { id: 'settings', label: 'Mis Datos', icon: User },
         { id: 'loyalty', label: 'Siren Club', icon: Crown },
@@ -81,13 +91,15 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
                         })}
                     </nav>
 
-                    <div className="hidden md:block pt-8 border-t border-border">
-                        <Link
-                            href="/#reservar"
-                            className="w-full flex items-center justify-center gap-2 py-3 px-6 text-xs whitespace-nowrap text-white font-bold uppercase tracking-widest bg-primary rounded-full hover:bg-primary/90 transition-colors shadow-xl shadow-primary/20"
+                    <div className="pt-8 border-t border-border">
+                        <button
+                            onClick={handleSignOut}
+                            disabled={isLoggingOut}
+                            className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-red-500/5 text-red-500 border border-red-500/20 font-bold text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all group"
                         >
-                            Nueva Reserva <ArrowLeft size={14} className="rotate-180" />
-                        </Link>
+                            <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
+                            Finalizar Sesión
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -98,12 +110,6 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
                     <h2 className={`${playfair.className} text-3xl text-foreground`}>
                         Mi <span className="text-primary italic">{getTabTitle()}</span>
                     </h2>
-                    <Link
-                        href="/#reservar"
-                        className="siren-button flex items-center gap-2 px-4 py-2 text-[10px] whitespace-nowrap !bg-background !text-primary border border-primary hover:!bg-primary/10 shadow-sm rounded-full"
-                    >
-                        Nueva Cita
-                    </Link>
                 </div>
 
                 <AnimatePresence mode="wait">

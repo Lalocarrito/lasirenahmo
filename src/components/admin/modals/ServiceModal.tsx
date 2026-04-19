@@ -38,10 +38,11 @@ export default function ServiceModal({
     isUploading
 }: ServiceModalProps) {
     const serviceSchema = z.object({
-        name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-        price: z.number().min(0, 'El precio debe ser 0 o mayor'),
-        description: z.string().min(10, 'La descripción es muy corta'),
-        duration: z.string().min(1, 'Especifica la duración'),
+        name: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres')
+            .regex(/^[a-zA-Z0-9\s\-áéíóúñÁÉÍÓÚÑ]+$/, 'Caracteres inválidos'),
+        price: z.number().min(0, 'El precio debe ser 0 o mayor').max(999999, 'Precio excedido').multipleOf(0.01),
+        description: z.string().min(10, 'La descripción es muy corta').max(500, 'Máximo 500 caracteres'),
+        duration: z.string().min(1, 'Especifica la duración').max(20, 'Duración demasiado larga'),
     });
 
     type ServiceFormData = z.infer<typeof serviceSchema>;

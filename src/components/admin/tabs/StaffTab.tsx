@@ -66,32 +66,54 @@ export default function StaffTab() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploadingAvatar(profileId);
+        // Validation based on AUDITORIA_SEGURIDAD.md (SVE-002)
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            toast.error('Solo se permiten JPEG, PNG o WebP');
+            return;
+        }
+
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_SIZE) {
+            toast.error('La imagen no puede superar 5MB');
+            return;
+        }
+
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const mimeToExt: Record<string, string[]> = {
+            'image/jpeg': ['jpg', 'jpeg'],
+            'image/png': ['png'],
+            'image/webp': ['webp'],
+        };
         
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${profileId}-${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        if (!mimeToExt[file.type]?.includes(ext)) {
+            toast.error('Extensión de archivo inválida');
+            return;
+        }
+
+        setUploadingAvatar(profileId);
+        const random = crypto.randomUUID();
+        const fileName = `${profileId}-${random}.${ext}`;
 
         try {
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file, { upsert: true });
-
+                .upload(fileName, file, { upsert: true, contentType: file.type });
+            
             if (uploadError) throw uploadError;
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profileId);
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+            
+            const { error: updateError } = await supabase.from('profiles')
+                .update({ avatar_url: publicUrl }).eq('id', profileId);
             
             if (updateError) throw updateError;
-            
-            toast.success('Foto de perfil actualizada exitosamente');
+
+            toast.success('Foto actualizada');
             queryClient.invalidateQueries({ queryKey: ['staff-profiles'] });
         } catch (error: unknown) {
             logger.error(error);
-            toast.error("Error al subir la foto. Asegúrate de que el Bucket 'avatars' esté configurado.");
+            toast.error('Error al subir la foto');
         } finally {
             setUploadingAvatar(null);
             if (fileInputRef.current) fileInputRef.current.value = '';

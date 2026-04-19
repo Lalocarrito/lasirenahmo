@@ -24,17 +24,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user ?? null);
-    });
+    const fetchUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        setUser(null);
+      } else {
+        setUser(user);
+      }
+    };
+    fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user ?? null);
-      } else {
-        setUser(null);
-      }
+      setUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -52,9 +53,6 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-6 backdrop-blur-md bg-white/10 dark:bg-black/10 border-b border-white/10">
         <div className="flex items-center gap-3">
           <img src="/icon1.png" alt="La Sirena Logo" className="h-10 w-auto rounded-lg shadow-sm" />
-          <div className={`text-xl md:text-2xl font-bold text-primary ${playfair.className}`}>
-            La <span className="italic font-bold">Sirena</span>
-          </div>
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 border-l border-white/10 pl-4 md:pl-6">
@@ -74,14 +72,6 @@ export default function Home() {
               >
                 <Calendar size={14} /> Mis Citas
               </Link>
-              <button
-                onClick={handleSignOut}
-                aria-label="Cerrar sesión"
-                className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                title="Cerrar Sesión"
-              >
-                <LogOut size={18} />
-              </button>
             </div>
           ) : (
             <button
@@ -154,8 +144,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-20 text-center border-t border-primary/10 bg-card/20 backdrop-blur-md px-4">
-        <div className={`${playfair.className} text-2xl text-primary mb-4`}>La Sirena</div>
-        <p className="text-muted-foreground text-xs mb-6">© 2024 La Sirena. Todos los derechos reservados. <span className="opacity-20">v2.1</span></p>
+        <p className="text-muted-foreground text-xs mb-6">© 2026 La Sirena. Todos los derechos reservados. <span className="opacity-20">v2.1</span></p>
         <div className="flex flex-wrap justify-center gap-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
           <Link href="/privacy" className="hover:text-primary transition-colors">Política de Privacidad</Link>
           <Link href="/terms" className="hover:text-primary transition-colors">Términos del Servicio</Link>

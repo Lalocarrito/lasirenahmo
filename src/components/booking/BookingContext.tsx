@@ -81,7 +81,9 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             try {
                 const parsed = JSON.parse(saved);
                 const timestamp = parsed._timestamp || 0;
-                if (Date.now() - timestamp < 1000 * 60 * 60 * 2) {
+                // If it's step 6 (Success), we don't resume. We start fresh on next visit.
+                // This fulfills the user requirement: "si recarga o regresa debe iniciar desde 0"
+                if (Date.now() - timestamp < 1000 * 60 * 60 * 2 && parsed.step !== 6) {
                     setBookingState(prev => ({
                         ...prev,
                         step: parsed.step || 1,

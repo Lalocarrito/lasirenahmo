@@ -25,7 +25,6 @@ export default async function PerfilPage() {
                 <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
                     <Link href="/" className="flex items-center gap-3 group">
                         <img src="/icon1.png" alt="Logo" className="h-8 md:h-9 w-auto rounded-md shadow-sm group-hover:scale-105 transition-transform" />
-                        <span className={`${playfair.className} text-xl md:text-2xl font-bold tracking-wider text-primary`}>La <span className="italic font-bold">Sirena</span></span>
                     </Link>
                     
                     <Link href="/" className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors">

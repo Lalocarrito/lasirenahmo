@@ -23,9 +23,6 @@ const bookingSummarySchema = z.object({
     phone: z.string().optional(),
     notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
     honeypot: z.string().max(0, '').optional(),
-    termsAccepted: z.boolean().refine(val => val === true, {
-        message: 'Debes aceptar los términos para continuar.',
-    }),
 });
 
 type BookingSummaryFormData = z.infer<typeof bookingSummarySchema>;
@@ -68,7 +65,6 @@ export default function BookingSummary() {
             phone: '',
             notes: notes || '',
             honeypot: '',
-            termsAccepted: false,
         },
     });
 
@@ -158,6 +154,7 @@ export default function BookingSummary() {
                     <div className="pt-6 border-t border-border flex flex-col gap-4">
                         <Link 
                             href="/perfil"
+                            onClick={() => resetBooking()}
                             className="text-center p-4 rounded-2xl bg-primary/5 text-primary border border-primary/20 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all"
                         >
                             Ver mis citas
@@ -258,20 +255,14 @@ export default function BookingSummary() {
                 </div>
 
                 {/* COMPLIANCE: Terms & Privacy acceptance */}
-                <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                        type="checkbox"
-                        {...register('termsAccepted')}
-                        className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
-                    />
+                <div className="flex items-start gap-3 group">
                     <span className="text-[11px] text-muted-foreground leading-relaxed">
                         Al reservar, acepto los{' '}
                         <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
                         {' '}y el{' '}
                         <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
                     </span>
-                </label>
-                {errors.termsAccepted && <p className="text-red-500 text-xs ml-7">{errors.termsAccepted.message}</p>}
+                </div>
 
                 <button
                     type="submit"

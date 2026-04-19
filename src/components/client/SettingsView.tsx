@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Loader2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 interface UserData {
     full_name: string;
@@ -19,15 +20,20 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
 
     useEffect(() => {
         const fetchUserData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && user.user_metadata) {
-                setFormData({
-                    full_name: user.user_metadata.full_name || '',
-                    phone: user.user_metadata.phone || '',
-                    dob: user.user_metadata.dob || '',
-                });
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user && user.user_metadata) {
+                    setFormData({
+                        full_name: user.user_metadata.full_name || '',
+                        phone: user.user_metadata.phone || '',
+                        dob: user.user_metadata.dob || '',
+                    });
+                }
+            } catch (error) {
+                // Ignore missing session error on initial load
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
         fetchUserData();
     }, []);
@@ -36,31 +42,47 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const profileSchema = z.object({
+        full_name: z.string().min(2, 'El nombre es demasiado corto').max(100, 'Máximo 100 caracteres')
+            .regex(/^[a-zA-Z\s\-áéíóúñÁÉÍÓÚÑ]+$/, 'El nombre contiene caracteres inválidos'),
+        phone: z.string()
+            .regex(/^[+]?[0-9\s()\-.]{7,20}$/, 'Formato de teléfono inválido')
+            .optional().or(z.literal('')),
+        dob: z.string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD)')
+            .refine((d) => {
+                if (!d) return true;
+                const age = new Date().getFullYear() - new Date(d).getFullYear();
+                return age >= 13 && age <= 120;
+            }, 'La edad debe estar entre 13 y 120 años')
+            .optional().or(z.literal('')),
+    });
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            const validatedData = profileSchema.parse(formData);
             const { error } = await supabase.auth.updateUser({
-                data: {
-                    full_name: formData.full_name,
-                    phone: formData.phone,
-                    dob: formData.dob,
-                }
+                data: validatedData
             });
             
             if (error) throw error;
 
-            // Optional: Also sync to public.profiles if needed
+            // Sync to public.profiles
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 await supabase.from('profiles').update({
-                    full_name: formData.full_name,
-                    phone: formData.phone
+                    full_name: validatedData.full_name,
+                    phone: validatedData.phone
                 }).eq('id', user.id);
             }
 
             toast.success("Tus datos han sido actualizados exitosamente.");
-        } catch (error: any) {
-            toast.error(`Error al guardar: ${error.message}`);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof z.ZodError 
+                ? error.issues[0].message 
+                : error instanceof Error ? error.message : 'Error desconocido';
+            toast.error(`Error al guardar: ${errorMessage}`);
         } finally {
             setIsSaving(false);
         }
