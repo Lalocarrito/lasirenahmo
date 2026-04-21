@@ -2,6 +2,7 @@ import { Crown, Star, Gift, Sparkles, Loader2 } from 'lucide-react';
 import { playfair } from '@/lib/fonts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { motion } from 'framer-motion';
 
 export default function LoyaltyView() {
     const { data: profile, isLoading } = useQuery({
