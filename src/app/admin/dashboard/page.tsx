@@ -447,7 +447,6 @@ export default function AdminDashboard() {
 
                     {activeTab === 'Citas' && (
                         <AppointmentsTab
-                            appointments={appointments}
                             services={services}
                             setManagingAppointment={setManagingAppointment}
                             handleUpdateStatus={handleUpdateStatus}
