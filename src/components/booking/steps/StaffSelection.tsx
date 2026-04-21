@@ -8,6 +8,7 @@ import { Profile } from '@/types';
 import { Loader2, User, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Playfair_Display } from 'next/font/google';
+import Image from 'next/image';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
@@ -68,9 +69,15 @@ export default function StaffSelection() {
                                     : "border-border hover:border-primary/50 hover:bg-muted/50 bg-card"
                             )}
                         >
-                            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0 overflow-hidden border border-primary/20">
+                            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0 overflow-hidden border border-primary/20 relative">
                                 {staff.avatar_url ? (
-                                    <img src={staff.avatar_url} alt={staff.full_name} className="w-full h-full object-cover" />
+                                    <Image 
+                                        src={staff.avatar_url} 
+                                        alt={staff.full_name || 'Staff'} 
+                                        width={56} 
+                                        height={56} 
+                                        className="w-full h-full object-cover" 
+                                    />
                                 ) : (
                                     <User size={24} />
                                 )}

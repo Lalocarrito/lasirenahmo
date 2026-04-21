@@ -12,6 +12,7 @@ import { useBooking } from '../BookingContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
 
@@ -101,39 +102,52 @@ export default function BookingSummary() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="max-w-md mx-auto text-center"
             >
-                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-10 relative shadow-xl overflow-hidden border-4 border-primary/20">
-                    <img src="/icon1.png" alt="La Sirena Logo" className="w-full h-full object-cover" />
-                </div>
-                <h2 className={`${playfair.className} text-5xl mb-6 italic`}>¡Reserva Guardada!</h2>
-                <div className="bg-card w-full p-6 rounded-3xl border border-border/50 text-left mb-10 shadow-lg shadow-black/5 space-y-4">
-                    <p className="text-[10px] text-center text-primary/80 uppercase font-bold tracking-[0.2em] mb-4">Guarda captura de esta confirmación</p>
-                    
-                    <div className="flex justify-between items-end border-b border-border/50 pb-3">
-                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Cita</span>
-                        <span className="font-bold text-sm text-right">
-                           {selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })} <br/>
-                           <span className="text-primary">{selectedTime}</span>
-                        </span>
+                <div className="bg-card w-full rounded-3xl border border-border/50 text-left mb-6 shadow-2xl shadow-primary/5 overflow-hidden relative">
+                    {/* Header with Logo */}
+                    <div className="p-6 flex flex-col items-center border-b border-border/50">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-md border-2 border-primary/20 relative overflow-hidden">
+                            <Image 
+                                src="/icon1.png" 
+                                alt="La Sirena Logo" 
+                                fill 
+                                className="object-cover" 
+                                priority
+                            />
+                        </div>
+                        <h2 className={`${playfair.className} text-3xl italic text-center`}>¡Reserva Guardada!</h2>
                     </div>
-                    <div className="flex justify-between items-center border-b border-border/50 pb-3">
-                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Servicio</span>
-                        <span className="font-bold text-sm">{selectedService?.name}</span>
+
+                    {/* Details */}
+                    <div className="px-6 py-8 flex flex-col items-center text-center">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mb-3">Servicio Agendado</p>
+                        <h3 className={`${playfair.className} text-3xl text-primary mb-2 leading-tight`}>{selectedService?.name}</h3>
+                        <p className="text-xs font-medium text-muted-foreground mb-8">
+                            con <span className="text-foreground font-bold">{selectedStaff ? (selectedStaff.full_name || 'Lashista') : 'Cualquiera'}</span>
+                        </p>
+
+                        <div className="w-full flex justify-center items-center py-4 border-y border-border/50 bg-muted/10">
+                            <div className="flex-1 text-center px-2">
+                                <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 font-bold">Día</p>
+                                <p className="font-bold text-sm capitalize">
+                                    {selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+                                </p>
+                            </div>
+                            <div className="w-px bg-border/50 h-8"></div>
+                            <div className="flex-1 text-center px-2">
+                                <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 font-bold">Hora</p>
+                                <p className="font-bold text-sm text-primary">{selectedTime}</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center border-b border-border/50 pb-3">
-                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Lashista</span>
-                        <span className="font-bold text-sm">{selectedStaff ? (selectedStaff.full_name || 'Lashista') : 'Cualquiera'}</span>
+
+                    {/* Ticket Footer */}
+                    <div className="bg-primary/5 p-5 flex justify-between items-center text-primary border-t border-primary/10">
+                        <span className="font-bold uppercase tracking-widest text-[9px] w-1/2 leading-tight">Total a liquidar en sucursal</span>
+                        <span className="font-bold text-2xl">${selectedService?.price}</span>
                     </div>
-                    <div className="bg-primary/5 p-4 rounded-2xl flex justify-between items-center text-primary mt-2 border border-primary/20">
-                        <span className="font-bold uppercase tracking-widest text-[10px]">Total a liquidar en sucursal</span>
-                        <span className="font-bold text-lg">${selectedService?.price}</span>
-                    </div>
-                    
-                    <p className="text-[10px] text-muted-foreground text-center pt-2 leading-relaxed">
-                        Recomendaciones: <br/> Por favor llega 5 minutos antes con tus pestañas limpias.
-                    </p>
                 </div>
 
-                <div className="w-full rounded-3xl overflow-hidden border border-border/50 mb-10 shadow-sm relative h-64 sm:h-80">
+                <div className="w-full rounded-3xl overflow-hidden border border-border/50 mb-6 shadow-sm relative h-32 sm:h-40">
                     <iframe 
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1743.0824296146386!2d-111.01188260160522!3d29.100813899999988!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ce81e87a0fcc95%3A0x1a261340df03f79f!2sLA%20SIRENA%20%7C%20Lash%20Studio%20%26%20Academy!5e0!3m2!1ses-419!2sus!4v1776190435370!5m2!1ses-419!2sus" 
                         className="absolute inset-0 w-full h-full border-0"
@@ -171,33 +185,38 @@ export default function BookingSummary() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
-            className="max-w-xl mx-auto"
+            className="w-full max-w-3xl mx-auto px-1 md:px-4"
         >
             <div className="text-center mb-10">
                 <h2 className={`${playfair.className} text-5xl mb-3 italic`}>Finalizar</h2>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="siren-card !p-8 shadow-3xl space-y-8">
+            <form onSubmit={handleSubmit(onSubmit)} className="siren-card !p-3 sm:!p-6 md:!p-10 shadow-3xl space-y-6">
                 {selectedService?.image_url && (
                     <div className="w-full h-48 md:h-64 rounded-2xl overflow-hidden relative shadow-md border border-border/50">
-                        <img src={selectedService.image_url} alt={selectedService.name} className="w-full h-full object-cover" />
+                        <Image 
+                            src={selectedService.image_url} 
+                            alt={selectedService.name} 
+                            fill 
+                            className="object-cover" 
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                     </div>
                 )}
                 <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                    <div className="flex justify-between items-center px-6 py-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Profesional</span>
                         <p className="font-bold text-sm">{selectedStaff ? (selectedStaff.full_name || 'Lashista') : 'Cualquiera'}</p>
                     </div>
-                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                    <div className="flex justify-between items-center px-6 py-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Servicio</span>
                         <p className="font-bold text-sm text-primary uppercase tracking-wide">{selectedService?.name}</p>
                     </div>
-                    <div className="flex justify-between items-center p-5 bg-primary/5 rounded-2xl border border-primary/20 shadow-sm">
+                    <div className="flex justify-between items-center px-6 py-5 bg-primary/5 rounded-2xl border border-primary/20 shadow-sm">
                         <span className="text-[10px] uppercase font-bold text-primary tracking-widest">Inversión</span>
                         <p className="font-bold text-lg text-primary">${selectedService?.price}</p>
                     </div>
-                    <div className="flex justify-between items-center p-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
+                    <div className="flex justify-between items-center px-6 py-5 bg-card/50 rounded-2xl border border-border/40 shadow-sm">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cita</span>
                         <p className="font-bold text-sm text-right">
                             {selectedDate?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}<br/>

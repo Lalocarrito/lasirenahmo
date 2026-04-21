@@ -1,12 +1,36 @@
 -- Tables for LaSirenaHMO
 
+-- Security: Enums for stricter validation
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('admin', 'staff', 'user');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'appointment_status') THEN
+        CREATE TYPE appointment_status AS ENUM ('pending', 'confirmed', 'completed', 'cancelled');
+    END IF;
+END $$;
+
+-- Audit Logs: Tracking management changes
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  admin_id UUID REFERENCES auth.users(id),
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id UUID,
+  previous_data JSONB,
+  new_data JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Profiles: Stores user/admin roles
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT,
   email TEXT,
   phone TEXT,
-  role TEXT DEFAULT 'user' -- 'admin', 'staff', or 'user'
+  role user_role DEFAULT 'user',
+  loyalty_points INTEGER DEFAULT 0
 );
 
 -- Services: The catalog of eyelash services
@@ -30,7 +54,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   staff_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   appointment_date DATE NOT NULL,
   appointment_time TEXT NOT NULL,
-  status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'completed', 'cancelled'
+  status appointment_status DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -129,6 +153,12 @@ USING (
     AND (profiles.role = 'admin' OR (profiles.role = 'staff' AND appointments.staff_id = auth.uid()))
   )
 );
+
+DROP POLICY IF EXISTS "Usuarios pueden ver sus propias citas" ON appointments;
+CREATE POLICY "Usuarios pueden ver sus propias citas"
+ON appointments FOR SELECT
+TO authenticated
+USING (customer_email = auth.jwt()->>'email');
 
 DROP POLICY IF EXISTS "Admins y Staff pueden actualizar citas" ON appointments;
 CREATE POLICY "Admins y Staff pueden actualizar citas"

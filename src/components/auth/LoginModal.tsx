@@ -26,7 +26,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,27 +167,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                             )}
 
                             <div className="space-y-4">
-                                {/* Privacy checkbox — registration only */}
+                                {/* Compliance statement — registration only (matches booking flow) */}
                                 {!isLogin && !isForgotPassword && (
-                                    <label className="flex items-start gap-3 cursor-pointer group pb-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={acceptedTerms}
-                                            onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                            className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
-                                        />
-                                        <span className="text-[11px] text-muted-foreground leading-relaxed text-left">
-                                            Acepto los{' '}
-                                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
-                                            {' '}y el{' '}
-                                            <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
-                                        </span>
-                                    </label>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed text-center pb-2">
+                                        Al crear una cuenta, aceptas los{' '}
+                                        <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
+                                        {' '}y el{' '}
+                                        <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
+                                    </p>
                                 )}
 
                                 <button
                                     type="submit"
-                                    disabled={isLoading || (!isLogin && !isForgotPassword && !acceptedTerms)}
+                                    disabled={isLoading}
                                     className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
                                     {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
@@ -210,13 +201,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                         {!isForgotPassword && (
                             <>
-                                <button
-                                    onClick={handleGoogleLogin}
-                                    className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
-                                >
-                                    <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
-                                    Continuar con Google
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        onClick={handleGoogleLogin}
+                                        className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest transition-all hover:bg-muted/30 active:scale-[0.98]"
+                                    >
+                                        <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
+                                        Continuar con Google
+                                    </button>
+                                </div>
                             </>
                         )}
 

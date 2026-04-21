@@ -35,7 +35,6 @@ export default function AuthOrGuest() {
     const [password, setPassword] = useState('');
     const [isLogin, setIsLogin] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const handleGoogleLogin = async () => {
         const { error } = await supabase.auth.signInWithOAuth({
@@ -132,40 +131,34 @@ export default function AuthOrGuest() {
                         />
                     </div>
 
-                    {/* Privacy checkbox — registration only */}
+                    {/* Compliance statement — registration only (matches summary and login) */}
                     {!isLogin && (
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                            <input
-                                type="checkbox"
-                                checked={acceptedTerms}
-                                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
-                            />
-                            <span className="text-[11px] text-muted-foreground leading-relaxed">
-                                Acepto los{' '}
-                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
-                                {' '}y el{' '}
-                                <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
-                            </span>
-                        </label>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed text-center pb-2">
+                            Al crear una cuenta, aceptas los{' '}
+                            <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Términos y Condiciones</Link>
+                            {' '}y el{' '}
+                            <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Aviso de Privacidad</Link>.
+                        </p>
                     )}
 
                     <button
                         type="submit"
-                        disabled={isSubmitting || (!isLogin && !acceptedTerms)}
+                        disabled={isSubmitting}
                         className="w-full siren-button !py-5 flex items-center justify-center gap-3 text-sm shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
                     </button>
                 </form>
 
-                <button
-                    onClick={handleGoogleLogin}
-                    className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 transition-all"
-                >
-                    <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
-                    Continuar con Google
-                </button>
+                <div className="relative group">
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="w-full mt-6 p-4 rounded-2xl border border-border flex items-center justify-center gap-4 font-bold text-xs uppercase tracking-widest hover:bg-muted/30 active:scale-[0.98] transition-all"
+                    >
+                        <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="" />
+                        Continuar con Google
+                    </button>
+                </div>
 
                 <div className="mt-8 pt-6 border-t border-border/50 flex justify-center">
                     <button

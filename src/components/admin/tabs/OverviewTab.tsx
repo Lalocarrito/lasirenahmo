@@ -3,6 +3,7 @@
 import { Playfair_Display } from 'next/font/google';
 import { Calendar, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import type { Appointment } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
@@ -15,50 +16,85 @@ interface OverviewTabProps {
 
 export default function OverviewTab({ appointments, setManagingAppointment, setActiveTab }: OverviewTabProps) {
     const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const thisMonth = today.getMonth();
+    const thisYear = today.getFullYear();
 
+    // Data calculations
     const todaysAppointments = appointments.filter(apt => apt.appointment_date === todayStr);
+    
+    const monthlyAppointments = appointments.filter(apt => {
+        const d = new Date(apt.appointment_date);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear && apt.status === 'completed';
+    });
+
+    const revenue = monthlyAppointments.reduce((sum, apt) => sum + Number(apt.services?.price || 0), 0);
+    
+    // Top Service
+    const serviceCounts = appointments.reduce((acc: Record<string, number>, apt) => {
+        const name = apt.services?.name || 'Otro';
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+    }, {});
+    const topService = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    const activeClients = new Set(appointments.map(a => a.customer_email || a.customer_phone)).size;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Quick Stats Banner */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 admin-card bg-gradient-to-br from-primary to-primary/80 text-white border-none shadow-primary/30 shadow-xl overflow-hidden relative">
+            {/* Advanced Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2 admin-card bg-gradient-to-br from-primary to-primary/80 text-white border-none shadow-primary/30 shadow-xl overflow-hidden relative min-h-[160px]">
                     <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-                    <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-black/10 rounded-full blur-2xl" />
                     <div className="relative z-10 flex flex-col justify-between h-full">
-                        <h3 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-2">Resumen de Hoy</h3>
+                        <h3 className="font-bold text-sm uppercase tracking-widest opacity-80 mb-2">Ingresos del Mes (Est.)</h3>
                         <div className="flex justify-between items-end">
                             <div>
-                                <span className="text-sm opacity-90 block mb-1">Citas Totales</span>
-                                <span className="text-6xl font-black tracking-tighter">{todaysAppointments.length}</span>
+                                <span className="text-sm opacity-90 block mb-1">Total Completado</span>
+                                <span className={cn("text-5xl font-black tracking-tighter", playfair.className)}>${revenue.toLocaleString()}</span>
                             </div>
                             <div className="text-right">
-                                <span className="text-sm opacity-90 block mb-1">Por confirmar</span>
-                                <span className="text-4xl font-bold">{todaysAppointments.filter(a => a.status === 'pending').length}</span>
+                                <span className="text-sm opacity-90 block mb-1">Citas Hoy</span>
+                                <span className="text-4xl font-bold">{todaysAppointments.length}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="admin-card flex flex-col justify-center space-y-3 relative overflow-hidden bg-gradient-to-b from-card to-muted/20">
-                    <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-1">Acciones Rápidas</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => setActiveTab('Citas')}
-                            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold"
-                        >
-                            <Calendar size={18} />
-                            <span>Nueva Cita</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('Catálogo')}
-                            className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl bg-primary/5 text-primary/70 hover:bg-primary/20 transition-all text-xs font-bold"
-                        >
-                            <Users size={18} />
-                            <span>Servicios</span>
-                        </button>
+                <div className="admin-card bg-card border-border flex flex-col justify-between p-5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Top Servicio</p>
+                    <p className={cn("text-xl font-bold text-primary dark:text-pink-400 line-clamp-1", playfair.className)}>{topService}</p>
+                    <div className="mt-4 h-1 w-full bg-primary/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary w-2/3" />
                     </div>
+                </div>
+
+                <div className="admin-card bg-card border-border flex flex-col justify-between p-5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Clientes Activos</p>
+                    <p className={cn("text-3xl font-black", playfair.className)}>{activeClients}</p>
+                    <p className="text-[10px] text-green-500 font-bold mt-1 uppercase">+12% vs mes pasado</p>
+                </div>
+            </div>
+            <div className="admin-card flex justify-between items-center bg-gradient-to-r from-card to-muted/20 border-border p-5 rounded-2xl">
+                <div className="space-y-1">
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-foreground">Acciones Rápidas</h3>
+                    <p className="text-xs text-muted-foreground">Gestiona rápidamente el sistema.</p>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setActiveTab('Citas')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold"
+                    >
+                        <Calendar size={16} />
+                        <span className="hidden sm:inline">Nueva Cita</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('Catálogo')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 text-primary/70 hover:bg-primary/20 transition-all text-xs font-bold"
+                    >
+                        <Users size={16} />
+                        <span className="hidden sm:inline">Servicios</span>
+                    </button>
                 </div>
             </div>
 

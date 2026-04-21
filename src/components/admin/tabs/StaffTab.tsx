@@ -8,6 +8,7 @@ import { Loader2, Shield, UserCheck, Search, ImagePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import Image from 'next/image';
 
 export default function StaffTab() {
     const queryClient = useQueryClient();
@@ -187,7 +188,13 @@ export default function StaffTab() {
                                 className="relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer group shrink-0 overflow-hidden border-2 border-border/50 hover:border-primary transition-all"
                             >
                                 {p.avatar_url ? (
-                                    <img src={p.avatar_url} alt={p.full_name} className="w-full h-full object-cover" />
+                                    <Image 
+                                        src={p.avatar_url} 
+                                        alt={p.full_name || 'Staff'} 
+                                        fill 
+                                        sizes="64px"
+                                        className="w-full h-full object-cover" 
+                                    />
                                 ) : (
                                     <div className={cn(
                                         "w-full h-full flex items-center justify-center",

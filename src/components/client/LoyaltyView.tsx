@@ -1,10 +1,31 @@
-'use client';
-
-import { motion } from 'framer-motion';
-import { Crown, Star, Gift, Sparkles } from 'lucide-react';
+import { Crown, Star, Gift, Sparkles, Loader2 } from 'lucide-react';
 import { playfair } from '@/lib/fonts';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 export default function LoyaltyView() {
+    const { data: profile, isLoading } = useQuery({
+        queryKey: ['user-loyalty'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+            const { data } = await supabase.from('profiles').select('loyalty_points').eq('id', user.id).single();
+            return data;
+        }
+    });
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="animate-spin text-primary" size={32} />
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Consultando tus beneficios...</p>
+            </div>
+        );
+    }
+
+    const points = profile?.loyalty_points || 0;
+    const level = points >= 1000 ? 'Diamante' : points >= 500 ? 'Platino' : points >= 100 ? 'Oro' : 'Sirena';
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
@@ -20,7 +41,7 @@ export default function LoyaltyView() {
                             <Crown size={16} className="text-[#FFE5B4]" />
                             <span className="text-xs font-bold uppercase tracking-widest text-[#FFE5B4]">Siren Club</span>
                         </div>
-                        <h3 className={`${playfair.className} text-4xl md:text-5xl mb-2`}>Nivel Oro</h3>
+                        <h3 className={`${playfair.className} text-4xl md:text-5xl mb-2`}>Nivel {level}</h3>
                         <p className="text-sm opacity-80 max-w-sm">
                             Gracias por tu lealtad. Estás acumulando puntos por cada peso invertido en tu belleza.
                         </p>
@@ -28,7 +49,7 @@ export default function LoyaltyView() {
                     
                     <div className="bg-white/10 backdrop-blur-md rounded-full p-8 md:p-10 border border-white/20 shadow-inner flex flex-col items-center justify-center min-w-[180px]">
                         <span className={`${playfair.className} text-5xl md:text-6xl text-[#FFE5B4] flex items-center gap-2`}>
-                            0 <Star size={24} className="fill-[#FFE5B4]" />
+                            {points} <Star size={24} className="fill-[#FFE5B4]" />
                         </span>
                         <span className="text-[10px] uppercase font-bold tracking-widest mt-2 opacity-80">Puntos Sirena</span>
                     </div>

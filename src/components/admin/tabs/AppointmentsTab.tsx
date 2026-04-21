@@ -12,23 +12,49 @@ import ConfirmModal from '../modals/ConfirmModal';
 
 import type { Appointment, Service } from '@/types';
 
+import { useQuery } from '@tanstack/react-query';
+
 interface AppointmentsTabProps {
-    appointments: Appointment[];
     services: Service[];
     setManagingAppointment: (appointment: Appointment) => void;
     handleUpdateStatus: (id: string, status: string) => void;
     fetchData: (loader?: boolean) => void;
 }
 
+const PAGE_SIZE = 20;
+
 export default function AppointmentsTab({
-    appointments,
     services,
     setManagingAppointment,
     handleUpdateStatus,
     fetchData
 }: AppointmentsTabProps) {
     const [view, setView] = useState<'upcoming' | 'past'>('upcoming');
+    const [page, setPage] = useState(0);
     const [isAdding, setIsAdding] = useState(false);
+
+    const { data, isLoading } = useQuery({
+        queryKey: ['admin-appointments', view, page],
+        queryFn: async () => {
+            const today = format(new Date(), 'yyyy-MM-dd');
+            let query = supabase.from('appointments').select('*, services(*)');
+            
+            if (view === 'upcoming') {
+                query = query.gte('appointment_date', today).order('appointment_date', { ascending: true });
+            } else {
+                query = query.lt('appointment_date', today).order('appointment_date', { ascending: false });
+            }
+
+            const from = page * PAGE_SIZE;
+            const to = from + PAGE_SIZE - 1;
+            const { data, error } = await query.range(from, to);
+            
+            if (error) throw error;
+            return data as Appointment[];
+        }
+    });
+
+    const appointments = data || [];
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, action: () => void }>({ isOpen: false, message: '', action: () => { } });
 
     // Form state
@@ -115,17 +141,16 @@ export default function AppointmentsTab({
                     <Plus size={18} /> Nueva Cita
                 </button>
             </div>
-
             <div className="grid gap-12">
                 {sortedDates.length === 0 ? (
                     <div className="admin-card text-center py-20 text-muted-foreground italic">
-                        No hay citas {view === 'upcoming' ? 'próximas' : 'pasadas'}.
+                        {isLoading ? <Loader2 className="animate-spin mx-auto" /> : `No hay citas ${view === 'upcoming' ? 'próximas' : 'pasadas'}.`}
                     </div>
                 ) : (
                     sortedDates.map(dateStr => {
                         const dateObj = parseISO(dateStr);
                         const dateLabel = format(dateObj, "EEEE d 'de' MMMM", { locale: es });
-                        const isToday = today.getTime() === dateObj.getTime();
+                        const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
 
                         return (
                             <div key={dateStr} className="space-y-4 relative">
@@ -203,6 +228,27 @@ export default function AppointmentsTab({
                         );
                     })
                 )}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex justify-center items-center gap-4 py-8">
+                <button
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0 || isLoading}
+                    className="px-4 py-2 bg-card border border-border rounded-xl text-xs font-bold uppercase transition-all hover:bg-primary/5 disabled:opacity-30"
+                >
+                    Anterior
+                </button>
+                <div className="text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1 rounded-full">
+                    Página {page + 1}
+                </div>
+                <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={appointments.length < PAGE_SIZE || isLoading}
+                    className="px-4 py-2 bg-card border border-border rounded-xl text-xs font-bold uppercase transition-all hover:bg-primary/5 disabled:opacity-30"
+                >
+                    Siguiente
+                </button>
             </div>
 
             <AnimatePresence>

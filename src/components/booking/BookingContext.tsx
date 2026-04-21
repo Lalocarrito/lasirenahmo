@@ -145,7 +145,39 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             _timestamp: Date.now()
         };
         sessionStorage.setItem('la-sirena-booking-state', JSON.stringify(stateToSave));
+
+        // Browser history management for steps
+        // This allows mobile users to use the back gesture to go to the previous step
+        const currentHistoryState = window.history.state;
+        if (!currentHistoryState || currentHistoryState.step !== bookingState.step) {
+            // If the step changed and it's not from a popstate, push it
+            // We use a custom property 'isBookingStep' to distinguish our states
+            window.history.pushState({ step: bookingState.step, isBookingStep: true }, '');
+        }
     }, [bookingState, isInitialized]);
+
+    // Listen for browser back/forward buttons
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            if (event.state && event.state.isBookingStep) {
+                const newStep = event.state.step;
+                // Update internal state without pushing to history again
+                setBookingState(prev => ({ ...prev, step: newStep }));
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        
+        // Push initial state if not present
+        // We wait for initialization to ensure we have the correct step (from sessionStorage)
+        if (isInitialized) {
+            if (!window.history.state || !window.history.state.isBookingStep) {
+                window.history.replaceState({ step: bookingState.step, isBookingStep: true }, '');
+            }
+        }
+
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [isInitialized]); // Re-run when initialization finishes to capture correct step
 
     const setStep = useCallback((step: number) => setBookingState(prev => ({ ...prev, step })), []);
     const setSelectedService = useCallback((selectedService: Service | null) => setBookingState(prev => ({ ...prev, selectedService })), []);

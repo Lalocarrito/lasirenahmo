@@ -9,8 +9,9 @@ import { useBooking } from '../BookingContext';
 import type { Service } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
-
+const MotionImage = motion.create(Image);
 
 export default function ServiceSelection() {
     const { setSelectedService, nextStep, availableServices, isLoadingServices } = useBooking();
@@ -63,7 +64,7 @@ export default function ServiceSelection() {
                     >
                         {/* Background Image */}
                         <div className="absolute inset-0 overflow-hidden">
-                            <motion.img
+                            <MotionImage
                                 variants={{
                                     initial: { scale: 1 },
                                     hover: { scale: 1.1 }
@@ -71,6 +72,8 @@ export default function ServiceSelection() {
                                 transition={{ duration: 1.5, ease: "easeOut" }}
                                 src={service.image_url || 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80'}
                                 alt={service.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, 50vw"
                                 className="w-full h-full object-cover"
                             />
                             {/* Adaptive Gradient Overlay */}

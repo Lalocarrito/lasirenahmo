@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import LoginModal from '@/components/auth/LoginModal';
 import { useTheme } from 'next-themes';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
@@ -52,7 +53,14 @@ export default function Home() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-6 backdrop-blur-md bg-white/10 dark:bg-black/10 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <img src="/icon1.png" alt="La Sirena Logo" className="h-10 w-auto rounded-lg shadow-sm" />
+          <Image 
+            src="/icon1.png" 
+            alt="La Sirena Logo" 
+            width={40} 
+            height={40} 
+            className="h-10 w-auto rounded-lg shadow-sm"
+            priority
+          />
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 border-l border-white/10 pl-4 md:pl-6">
