@@ -18,7 +18,7 @@ export default function StaffSelection() {
     const { data: staffList = [], isLoading } = useQuery<Profile[]>({
         queryKey: ['staff'],
         queryFn: async () => {
-            const { data } = await supabase.from('profiles').select('*').in('role', ['staff', 'admin']);
+            const { data } = await supabase.from('profiles').select('*').eq('role', 'staff').eq('is_visible', true);
             return (data || []) as Profile[];
         }
     });
@@ -84,7 +84,9 @@ export default function StaffSelection() {
                             </div>
                             <div>
                                 <h3 className={cn("text-xl text-foreground", playfair.className)}>{staff.full_name || 'Lashista'}</h3>
-                                <p className="text-muted-foreground text-sm mt-1">{staff.email}</p>
+                                {staff.specialty && (
+                                    <p className="text-xs font-medium text-muted-foreground mt-1">{staff.specialty}</p>
+                                )}
                             </div>
                         </button>
                     ))}

@@ -12,6 +12,11 @@ import LoginModal from '@/components/auth/LoginModal';
 import { useTheme } from 'next-themes';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import Image from 'next/image';
+import HeroSection from '@/components/HeroSection';
+import TeamSection from '@/components/TeamSection';
+import TestimonialsSection from '@/components/TestimonialsSection';
+import FAQSection from '@/components/FAQSection';
+
 
 export default function Home() {
   const router = useRouter();
@@ -22,6 +27,7 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
+    window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
@@ -49,7 +55,8 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen mesh-gradient transition-colors duration-500">
+    <main className="min-h-screen transition-colors duration-500 relative">
+      <div className="absolute inset-0 mesh-gradient pointer-events-none -z-10" />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-6 backdrop-blur-md bg-white/10 dark:bg-black/10 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -93,27 +100,10 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative px-4 pt-44 pb-20 flex flex-col items-center text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl"
-        >
-          <h1 className={`${playfair.className} text-6xl md:text-8xl mb-6 text-foreground tracking-tight`}>
-            La <span className="text-primary italic font-bold">Sirena</span>
-          </h1>
-          <p className="text-sm md:text-base uppercase tracking-[0.5em] text-muted-foreground mb-12 font-bold">
-            Extensiones de Pestañas
-          </p>
-          <button
-            onClick={() => document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth' })}
-            className="siren-button py-4 px-10 text-xs shadow-2xl shadow-primary/20"
-          >
-            Reservar Ahora
-          </button>
-        </motion.div>
-      </section>
+      <HeroSection />
+
+      {/* Team Section */}
+      <TeamSection />
 
       {/* Booking Flow */}
       <div id="reservar" className="py-20 px-4 md:px-8 max-w-7xl mx-auto">
@@ -121,6 +111,12 @@ export default function Home() {
           <BookingFlow />
         </div>
       </div>
+
+      {/* Testimonials */}
+      <TestimonialsSection />
+
+      {/* FAQ Section */}
+      <FAQSection />
 
       {/* Ubicacion Section (Adapted to original style) */}
       <section id="ubicacion" className="py-24 px-6 max-w-4xl mx-auto">

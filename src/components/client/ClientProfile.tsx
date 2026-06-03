@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, User, Crown, LogOut } from 'lucide-react';
+import { Calendar as CalendarIcon, User, Crown, Star, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -12,8 +12,9 @@ import { playfair } from '@/lib/fonts';
 import AppointmentsView from './AppointmentsView';
 import SettingsView from './SettingsView';
 import LoyaltyView from './LoyaltyView';
+import ClientReviews from './ClientReviews';
 
-type TabType = 'appointments' | 'settings' | 'loyalty';
+type TabType = 'appointments' | 'settings' | 'loyalty' | 'reviews';
 
 export default function ClientProfile({ userEmail }: { userEmail: string }) {
     const router = useRouter();
@@ -29,6 +30,7 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
 
     const tabs: { id: TabType; label: string; icon: typeof CalendarIcon }[] = [
         { id: 'appointments', label: 'Mis Citas', icon: CalendarIcon },
+        { id: 'reviews', label: 'Reseñas', icon: Star },
         { id: 'settings', label: 'Mis Datos', icon: User },
         { id: 'loyalty', label: 'Siren Club', icon: Crown },
     ];
@@ -36,6 +38,7 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
     const getTabTitle = () => {
         switch (activeTab) {
             case 'appointments': return 'Historial';
+            case 'reviews': return 'Reseñas';
             case 'settings': return 'Perfil';
             case 'loyalty': return 'Lealtad';
             default: return '';
@@ -45,6 +48,7 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
     const renderActiveView = () => {
         switch (activeTab) {
             case 'appointments': return <AppointmentsView userEmail={userEmail} />;
+            case 'reviews': return <ClientReviews />;
             case 'settings': return <SettingsView userEmail={userEmail} />;
             case 'loyalty': return <LoyaltyView />;
             default: return null;

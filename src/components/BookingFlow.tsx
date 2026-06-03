@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+
 import { useRouter } from 'next/navigation';
 import { CheckCircle, LogOut, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,26 +20,6 @@ import Link from 'next/link';
 function BookingFlowContent() {
     const router = useRouter();
     const { step, setStep, user } = useBooking();
-    
-
-    const isInitialMount1 = useRef(true);
-
-    // Auto-scroll al encabezado cuando cambia el paso o al retomar reserva
-    useEffect(() => {
-        const isResuming = isInitialMount1.current && (step > 1 || (user && step >= 4));
-        
-        if (isInitialMount1.current) {
-            isInitialMount1.current = false;
-            if (!isResuming) return;
-        }
-
-        // Siempre subir al inicio del componente de reserva al cambiar de paso o al retomar
-        const el = document.getElementById('booking-flow-header');
-        if (el) {
-            const y = el.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-    }, [step, user]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();

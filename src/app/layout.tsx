@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "La Sirena | Extensiones de Pestañas",
+  title: "La Sirena | Beauty Studio",
   description: "Diseño premium de pestañas en Hermosillo. Realzamos tu mirada con estilo, lujo y perfección.",
   manifest: "/manifest.json",
   appleWebApp: {

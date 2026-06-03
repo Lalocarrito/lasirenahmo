@@ -5,6 +5,9 @@ export interface Profile {
   phone?: string;
   role: 'admin' | 'staff' | 'user';
   avatar_url?: string;
+  bio?: string;
+  specialty?: string;
+  is_visible?: boolean;
 }
 
 export interface Service {

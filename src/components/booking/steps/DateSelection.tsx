@@ -41,6 +41,7 @@ export default function DateSelection() {
     const [availabilityMap, setAvailabilityMap] = useState<Record<string, boolean>>({});
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
+    const [showAllDays, setShowAllDays] = useState(false);
 
     // Fetch basic availability and overrides
     useEffect(() => {
@@ -231,11 +232,27 @@ export default function DateSelection() {
 
             <div className="flex flex-col gap-4">
                 <div className="glass-card !p-8 shadow-2xl shadow-primary/5">
+                    <div className="flex items-center justify-between mb-4">
+                        <button
+                            onClick={prevStep}
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                        >
+                            <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                            Volver a profesional
+                        </button>
+                        <button
+                            onClick={() => setShowAllDays(!showAllDays)}
+                            className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest transition-all"
+                        >
+                            {showAllDays ? 'Mostrar solo disponibles' : 'Ver calendario completo'}
+                        </button>
+                    </div>
                     <DayCarousel 
                         selectedDate={selectedDate} 
                         onSelect={(d) => setSelectedDate(d)} 
                         overrides={overrides} 
                         availabilityMap={availabilityMap}
+                        showAllDays={showAllDays}
                     />
                 </div>
 
@@ -275,15 +292,6 @@ export default function DateSelection() {
                                 </div>
                             )}
                         </div>
-                    <div className="pt-12 flex justify-center">
-                        <button
-                            onClick={prevStep}
-                            className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
-                        >
-                            <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                            Volver a profesional
-                        </button>
-                    </div>
                 </motion.div>
                 )}
             </div>
@@ -291,16 +299,18 @@ export default function DateSelection() {
     );
 }
 
-function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap }: { 
+function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap, showAllDays }: { 
     selectedDate: Date | null, 
     onSelect: (d: Date) => void, 
     overrides: BusinessAvailabilityOverride[],
-    availabilityMap: Record<string, boolean>
+    availabilityMap: Record<string, boolean>,
+    showAllDays?: boolean
 }) {
     const today = startOfDay(new Date());
     
     // Generate next 30 days
-    const days = Array.from({ length: 30 }, (_, i) => addDays(today, i));
+    const allDays = Array.from({ length: 30 }, (_, i) => addDays(today, i));
+    const days = showAllDays ? allDays : allDays.filter(d => availabilityMap[format(d, 'yyyy-MM-dd')] !== false);
 
     return (
         <div className="space-y-4">
@@ -337,7 +347,9 @@ function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap }: {
                                 {day.toLocaleDateString('es-MX', { weekday: 'short' }).substring(0, 3)}
                             </span>
                             <span className="text-xl font-bold mt-0.5">{day.getDate()}</span>
-                            
+                            <span className="text-[8px] uppercase text-muted-foreground/60 mt-0.5">
+                                {day.toLocaleDateString('es-MX', { month: 'short' })}
+                            </span>
                             {isSelected && <motion.div layoutId="activeDay" className="absolute -bottom-1.5 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />}
 
                         </button>

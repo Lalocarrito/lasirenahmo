@@ -158,22 +158,13 @@ export default function BookingSummary() {
                 </div>
 
                 <div className="space-y-4">
-                    <button
-                        onClick={resetBooking}
-                        className="w-full siren-button !py-5 shadow-2xl shadow-primary/20"
+                    <Link 
+                        href="/perfil"
+                        onClick={() => resetBooking()}
+                        className="block w-full siren-button !py-5 shadow-2xl shadow-primary/20 text-center"
                     >
-                        Agendar otro servicio
-                    </button>
-
-                    <div className="pt-6 border-t border-border flex flex-col gap-4">
-                        <Link 
-                            href="/perfil"
-                            onClick={() => resetBooking()}
-                            className="text-center p-4 rounded-2xl bg-primary/5 text-primary border border-primary/20 font-bold text-xs uppercase tracking-widest hover:bg-primary/10 transition-all"
-                        >
-                            Ver mis citas
-                        </Link>
-                    </div>
+                        Ver mis citas
+                    </Link>
                 </div>
             </motion.div>
         );
