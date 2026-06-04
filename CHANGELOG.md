@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — 2026-06-02
+## [Unreleased] — 2026-06-03
 
 ### Hero & Layout
 - Rediseño completo del Hero: sin carrusel de imágenes, fondo con gradiente continuo + mesh
@@ -46,6 +46,36 @@
 - Nueva tabla `reviews` con RLS policies
 - Schema actualizado en `supabase_production.sql`
 
-### Seguridad
-- LoginModal ahora se renderiza con createPortal evitando problemas de stacking context
-- Eliminado auto-scroll que podía exponer el flujo de reserva
+### Admin
+- Login con Google en `/admin` usando `redirectTo: /auth/callback?next=/admin/dashboard`
+- Título cambiado a "Iniciar Sesión", sin subtítulo
+- "¿Olvidaste tu contraseña?" con formulario de recuperación
+- Toggle ver/ocultar contraseña
+- Placeholders eliminados
+
+### Perfil de Cliente
+- Nav rediseñada: toggle tema | Inicio | logout (círculo rojo)
+- "Cerrar sesión" movido a la nav (antes en sidebar)
+- "Finalizar Sesión" → "Cerrar sesión"
+- Subtítulo "Gestiona tus preferencias" eliminado
+- Tabs más compactas en mobile (iconos siempre visibles)
+- `staleTime: 0` para que las citas aparezcan sin F5
+
+### Teléfono con máscara
+- Nueva función `formatPhone()` en `src/lib/phone.ts`
+- Máscara visual `(662) 123-4567` en registro, perfil, booking y admin
+- Validación de 10 dígitos
+- Placeholder cambiado a "Teléfono"
+
+### Booking Flow
+- "Ver calendario completo" abre modal con grid mensual + navegación
+- Animación crossfade en cambio de meses
+- Días no disponibles en gris (`bg-muted/20`)
+- No permite navegar a meses pasados
+- Carrusel extendido a 120 días, auto-scroll al día seleccionado
+- Mapa de éxito reemplazado por botón "Cómo llegar" con borde rosa
+- "Volver a profesional" movido abajo centrado
+
+### Varios
+- "Email" → "Correo" en labels
+- "Login" → "Iniciar Sesión" en admin

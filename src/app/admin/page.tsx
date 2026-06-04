@@ -59,7 +59,7 @@ function AdminLoginContent() {
             if (authError) {
                 setError(authError.message === 'Invalid login credentials' ? 'Credenciales incorrectas' : authError.message);
             } else {
-                router.push('/admin/dashboard');
+                window.location.href = '/admin/dashboard';
             }
         }
 
