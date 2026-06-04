@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getSafeRedirectUrl } from '@/lib/safe-redirect';
+import { formatPhone } from '@/lib/phone';
 import { logger } from '@/lib/logger';
 import { playfair } from '@/lib/fonts';
 import { toast } from 'sonner';
@@ -174,12 +175,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Teléfono</label>
                                     <input
                                         type="tel"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
+                                        value={formatPhone(phone)}
+                                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                         className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none text-sm"
-                                        pattern="[0-9]{10}"
-                                        maxLength={10}
-                                        title="10 dígitos (ej. 6621234567)"
+                                        
                                     />
                                 </div>
                             )}

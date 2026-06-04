@@ -6,6 +6,7 @@ import { Loader2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { formatPhone } from '@/lib/phone';
 
 interface UserData {
     full_name: string;
@@ -112,7 +113,7 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
                             name="full_name"
                             value={formData.full_name}
                             onChange={handleChange}
-                            placeholder="Tu nombre"
+                           
                             className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                         />
                     </div>
@@ -122,10 +123,9 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
                         <input
                             type="tel"
                             name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            placeholder="10 dígitos"
-                            maxLength={10}
+                            value={formatPhone(formData.phone)}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                           
                             className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                         />
                     </div>

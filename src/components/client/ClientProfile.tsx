@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, User, Crown, Star, LogOut } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { Calendar as CalendarIcon, User, Crown, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playfair } from '@/lib/fonts';
 
@@ -17,16 +15,7 @@ import ClientReviews from './ClientReviews';
 type TabType = 'appointments' | 'settings' | 'loyalty' | 'reviews';
 
 export default function ClientProfile({ userEmail }: { userEmail: string }) {
-    const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>('appointments');
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-    const handleSignOut = async () => {
-        setIsLoggingOut(true);
-        await supabase.auth.signOut();
-        router.push('/');
-        router.refresh();
-    };
 
     const tabs: { id: TabType; label: string; icon: typeof CalendarIcon }[] = [
         { id: 'appointments', label: 'Citas', icon: CalendarIcon },
@@ -93,17 +82,6 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
                             );
                         })}
                     </nav>
-
-                    <div className="pt-8 border-t border-border">
-                        <button
-                            onClick={handleSignOut}
-                            disabled={isLoggingOut}
-                            className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-red-500/5 text-red-500 border border-red-500/20 font-bold text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all group"
-                        >
-                            <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
-                            Cerrar sesión
-                        </button>
-                    </div>
                 </div>
             </aside>
 

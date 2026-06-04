@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2, Sparkles, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import { formatPhone } from '@/lib/phone';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,7 +61,7 @@ export default function BookingSummary() {
         })
         : bookingSummarySchema;
 
-    const { register, handleSubmit, formState: { errors } } = useForm<BookingSummaryFormData>({
+    const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingSummaryFormData>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             phone: '',
@@ -147,16 +148,6 @@ export default function BookingSummary() {
                     </div>
                 </div>
 
-                <div className="w-full rounded-3xl overflow-hidden border border-border/50 mb-6 shadow-sm relative h-32 sm:h-40">
-                    <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1743.0824296146386!2d-111.01188260160522!3d29.100813899999988!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ce81e87a0fcc95%3A0x1a261340df03f79f!2sLA%20SIRENA%20%7C%20Lash%20Studio%20%26%20Academy!5e0!3m2!1ses-419!2sus!4v1776190435370!5m2!1ses-419!2sus" 
-                        className="absolute inset-0 w-full h-full border-0"
-                        allowFullScreen={true}
-                        loading="lazy" 
-                        referrerPolicy="no-referrer-when-downgrade"
-                    />
-                </div>
-
                 <div className="space-y-4">
                     <Link 
                         href="/perfil"
@@ -165,6 +156,13 @@ export default function BookingSummary() {
                     >
                         Ver mis citas
                     </Link>
+
+                    <button
+                        onClick={() => document.getElementById('ubicacion')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="w-full py-4 rounded-2xl border-2 border-primary/20 font-bold text-xs uppercase tracking-widest text-primary hover:bg-primary/5 transition-all"
+                    >
+                        Cómo llegar
+                    </button>
                 </div>
             </motion.div>
         );
@@ -238,14 +236,10 @@ export default function BookingSummary() {
                         <label className="text-[10px] uppercase font-bold text-primary tracking-widest ml-1">Número de Teléfono (Requerido)</label>
                         <input
                             type="tel"
-                            maxLength={10}
-                            {...register('phone')}
-                            onChange={(e) => {
-                                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                e.target.value = cleaned;
-                            }}
+                            value={formatPhone(watch('phone') || '')}
+                            onChange={(e) => setValue('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                             className="w-full p-4 rounded-2xl bg-primary/5 border border-primary/20 focus:border-primary transition-all outline-none text-sm font-bold"
-                            placeholder="Ej: 6621234567"
+                           
                         />
                         {errors.phone && <p className="text-red-500 text-xs ml-1">{errors.phone.message}</p>}
                         <p className="text-[9px] text-muted-foreground italic ml-1">Lo necesitamos para enviarte recordatorios de tu cita.</p>

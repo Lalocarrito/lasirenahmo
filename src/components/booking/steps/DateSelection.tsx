@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Playfair_Display } from 'next/font/google';
 import { Clock, CalendarOff, ChevronLeft } from 'lucide-react';
-import { addDays, startOfDay, isSameDay, format } from 'date-fns';
+import { addDays, startOfDay, isSameDay, isBefore, format, startOfMonth, endOfMonth, getDay, getDaysInMonth, addMonths, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
@@ -42,21 +44,22 @@ export default function DateSelection() {
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
     const [showAllDays, setShowAllDays] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
 
     // Fetch basic availability and overrides
     useEffect(() => {
         const fetchData = async () => {
             setIsLoadingAvailability(true);
             const todayStr = format(new Date(), 'yyyy-MM-dd');
-            const thirtyDaysLaterStr = format(addDays(new Date(), 30), 'yyyy-MM-dd');
+            const rangeEnd = format(addDays(new Date(), 120), 'yyyy-MM-dd');
 
             let availQuery = supabase.from('business_availability').select('*').eq('is_active', true);
             let overrideQuery = supabase.from('business_availability_overrides').select('*')
                 .gte('override_date', todayStr)
-                .lte('override_date', thirtyDaysLaterStr);
+                .lte('override_date', rangeEnd);
             let apptQuery = supabase.from('appointments').select('appointment_date, appointment_time')
                 .gte('appointment_date', todayStr)
-                .lte('appointment_date', thirtyDaysLaterStr)
+                .lte('appointment_date', rangeEnd)
                 .neq('status', 'cancelled');
 
             if (selectedStaff) {
@@ -92,7 +95,7 @@ export default function DateSelection() {
         const today = startOfDay(new Date());
         const now = new Date();
 
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 120; i++) {
             const day = addDays(today, i);
             const dateStr = format(day, 'yyyy-MM-dd');
             const isToday = i === 0;
@@ -232,19 +235,12 @@ export default function DateSelection() {
 
             <div className="flex flex-col gap-4">
                 <div className="glass-card !p-8 shadow-2xl shadow-primary/5">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex justify-end mb-4">
                         <button
-                            onClick={prevStep}
-                            className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
-                        >
-                            <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                            Volver a profesional
-                        </button>
-                        <button
-                            onClick={() => setShowAllDays(!showAllDays)}
+                            onClick={() => setShowAllDays(true)}
                             className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest transition-all"
                         >
-                            {showAllDays ? 'Mostrar solo disponibles' : 'Ver calendario completo'}
+                            Ver calendario completo
                         </button>
                     </div>
                     <DayCarousel 
@@ -252,8 +248,21 @@ export default function DateSelection() {
                         onSelect={(d) => setSelectedDate(d)} 
                         overrides={overrides} 
                         availabilityMap={availabilityMap}
-                        showAllDays={showAllDays}
                     />
+
+                    <AnimatePresence>
+                        {showAllDays && (
+                            <MonthCalendar
+                                selectedDate={selectedDate}
+                                onSelect={(d) => { setSelectedDate(d); setShowAllDays(false); }}
+                                onClose={() => setShowAllDays(false)}
+                                availabilityMap={availabilityMap}
+                                calendarMonth={calendarMonth}
+                                setCalendarMonth={setCalendarMonth}
+                                overrides={overrides}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {selectedDate && (
@@ -294,43 +303,55 @@ export default function DateSelection() {
                         </div>
                 </motion.div>
                 )}
+
+                <div className="pt-8 flex justify-center">
+                    <button
+                        onClick={prevStep}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all duration-300 group"
+                    >
+                        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        Volver a profesional
+                    </button>
+                </div>
             </div>
         </motion.div>
     );
 }
 
-function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap, showAllDays }: { 
+function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap }: { 
     selectedDate: Date | null, 
     onSelect: (d: Date) => void, 
     overrides: BusinessAvailabilityOverride[],
-    availabilityMap: Record<string, boolean>,
-    showAllDays?: boolean
+    availabilityMap: Record<string, boolean>
 }) {
+    const scrollRef = useRef<HTMLDivElement>(null);
     const today = startOfDay(new Date());
     
-    // Generate next 30 days
-    const allDays = Array.from({ length: 30 }, (_, i) => addDays(today, i));
-    const days = showAllDays ? allDays : allDays.filter(d => availabilityMap[format(d, 'yyyy-MM-dd')] !== false);
+    const allDays = Array.from({ length: 120 }, (_, i) => addDays(today, i));
+    const days = allDays.filter(d => availabilityMap[format(d, 'yyyy-MM-dd')] !== false);
+
+    useEffect(() => {
+        if (!selectedDate || !scrollRef.current) return;
+        const el = scrollRef.current.querySelector(`[data-day="${format(selectedDate, 'yyyy-MM-dd')}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, [selectedDate]);
 
     return (
         <div className="space-y-4">
-            <div className="mb-4">
-            </div>
-            
-            <div className="-mx-2 px-2 flex gap-3 overflow-x-auto pb-4 pt-2 snap-x scroll-smooth custom-scrollbar no-scrollbar scroll-pl-2">
+            <div ref={scrollRef} className="-mx-2 px-2 flex gap-3 overflow-x-auto pb-4 pt-2 snap-x scroll-smooth custom-scrollbar no-scrollbar scroll-pl-2">
                 {days.map((day) => {
                     const dateStr = format(day, 'yyyy-MM-dd');
                     const isSelected = selectedDate ? isSameDay(selectedDate, day) : false;
                     const isToday = isSameDay(today, day);
                     
-                    // A day is disabled if explicitly marked as off_day OR if it has no available slots in the pre-calculated map
                     const isOffDayOverride = overrides.find(o => o.override_date === dateStr)?.is_off_day;
                     const hasNoAvailability = availabilityMap[dateStr] === false;
                     const isDisabled = isOffDayOverride || hasNoAvailability;
                     
                     return (
                         <button
-                            key={day.toISOString()}
+                            key={dateStr}
+                            data-day={dateStr}
                             disabled={isDisabled}
                             onClick={() => onSelect(day)}
                             className={cn(
@@ -351,11 +372,130 @@ function DayCarousel({ selectedDate, onSelect, overrides, availabilityMap, showA
                                 {day.toLocaleDateString('es-MX', { month: 'short' })}
                             </span>
                             {isSelected && <motion.div layoutId="activeDay" className="absolute -bottom-1.5 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />}
-
                         </button>
                     );
                 })}
             </div>
         </div>
+    );
+}
+
+function MonthCalendar({ selectedDate, onSelect, onClose, availabilityMap, calendarMonth, setCalendarMonth, overrides }: {
+    selectedDate: Date | null,
+    onSelect: (d: Date) => void,
+    onClose: () => void,
+    availabilityMap: Record<string, boolean>,
+    calendarMonth: Date,
+    setCalendarMonth: (d: Date) => void,
+    overrides: BusinessAvailabilityOverride[]
+}) {
+    const [mounted, setMounted] = useState(false);
+    const dirRef = useRef(0);
+    useEffect(() => setMounted(true), []);
+    const daysInMonth = getDaysInMonth(calendarMonth);
+    const startDay = getDay(startOfMonth(calendarMonth));
+    const today = startOfDay(new Date());
+    const currentMonth = startOfMonth(today);
+
+    const days: (Date | null)[] = Array(startDay).fill(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+        days.push(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), d));
+    }
+    while (days.length % 7 !== 0) days.push(null);
+
+    const weekdays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+    const targetPrev = subMonths(calendarMonth, 1);
+    const cantGoBack = isBefore(startOfMonth(targetPrev), currentMonth);
+
+    if (!mounted) return null;
+
+    return createPortal(
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        >
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="relative bg-card border border-border w-full max-w-md rounded-3xl shadow-2xl p-6"
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <button
+                        onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
+                        disabled={cantGoBack}
+                        className="p-2 rounded-xl hover:bg-muted/30 transition-all text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <span className="font-bold text-base uppercase tracking-widest">
+                        {format(calendarMonth, 'MMMM yyyy', { locale: es })}
+                    </span>
+                    <button
+                        onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                        className="p-2 rounded-xl hover:bg-muted/30 transition-all text-muted-foreground hover:text-foreground"
+                    >
+                        <ChevronLeft size={20} className="rotate-180" />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {weekdays.map(wd => (
+                        <div key={wd} className="text-[10px] font-bold uppercase text-muted-foreground/40 text-center py-1">
+                            {wd}
+                        </div>
+                    ))}
+                </div>
+
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={format(calendarMonth, 'yyyy-MM')}
+                        initial={{ opacity: 0, scale: 0.97 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="grid grid-cols-7 gap-1"
+                    >
+                        {days.map((day, i) => {
+                            if (!day) return <div key={`e-${i}`} />;
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            const isAvailable = availabilityMap[dateStr] !== false && !overrides.find(o => o.override_date === dateStr)?.is_off_day;
+                            const isSelected = selectedDate && isSameDay(selectedDate, day);
+                            const isPast = isBefore(day, today) && !isSameDay(day, today);
+                            const isDisabled = !isAvailable || isPast;
+
+                            return (
+                                <button
+                                    key={dateStr}
+                                    onClick={() => { if (!isDisabled) onSelect(day); }}
+                                    disabled={isDisabled}
+                                    className={cn(
+                                        "aspect-square rounded-xl text-sm font-bold transition-all flex flex-col items-center justify-center",
+                                        isSelected
+                                            ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
+                                            : isDisabled
+                                                ? "text-muted-foreground/30 bg-muted/20 cursor-not-allowed"
+                                                : "hover:bg-primary/10 hover:text-primary text-foreground"
+                                    )}
+                                >
+                                    {day.getDate()}
+                                </button>
+                            );
+                        })}
+                    </motion.div>
+                </AnimatePresence>
+            </motion.div>
+        </motion.div>,
+        document.body
     );
 }

@@ -8,6 +8,7 @@ import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { formatPhone } from '@/lib/phone';
 import ConfirmModal from '../modals/ConfirmModal';
 
 import type { Appointment, Service } from '@/types';
@@ -267,11 +268,11 @@ export default function AppointmentsTab({
                             <form onSubmit={handleCreateAppointment} className="space-y-4">
                                 <div>
                                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Cliente</label>
-                                    <input required value={formName} onChange={e => setFormName(e.target.value)} type="text" className="w-full p-3 rounded-xl border border-border bg-background" placeholder="Nombre completo" />
+                                    <input required value={formName} onChange={e => setFormName(e.target.value)} type="text" className="w-full p-3 rounded-xl border border-border bg-background" />
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Teléfono</label>
-                                    <input value={formPhone} onChange={e => setFormPhone(e.target.value)} type="tel" className="w-full p-3 rounded-xl border border-border bg-background" placeholder="Opcional" />
+                                    <input value={formatPhone(formPhone)} onChange={e => setFormPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} type="tel" className="w-full p-3 rounded-xl border border-border bg-background" />
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Servicio</label>
