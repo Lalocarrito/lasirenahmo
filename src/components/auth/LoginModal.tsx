@@ -128,7 +128,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                         <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleEmailAuth} className="space-y-5">
                             <div className="space-y-1">
-                                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Email</label>
+                                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Correo</label>
                                 <input
                                     type="email"
                                     value={email}
@@ -171,12 +171,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                             {mode === 'register' && (
                                 <div className="space-y-1">
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Teléfono (WhatsApp)</label>
+                                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest ml-1">Teléfono</label>
                                     <input
                                         type="tel"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
                                         className="w-full p-4 rounded-2xl bg-muted/20 border border-border focus:border-primary transition-all outline-none text-sm"
+                                        pattern="[0-9]{10}"
+                                        maxLength={10}
+                                        title="10 dígitos (ej. 6621234567)"
                                     />
                                 </div>
                             )}

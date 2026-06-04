@@ -34,7 +34,7 @@ export default function AppointmentsView({ userEmail }: { userEmail: string }) {
             return (data || []) as Appointment[];
         },
         enabled: !!userEmail,
-        staleTime: 1000 * 60, // 1 minute
+        staleTime: 0,
         retry: 2
     });
 

@@ -46,7 +46,7 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
         full_name: z.string().min(2, 'El nombre es demasiado corto').max(100, 'Máximo 100 caracteres')
             .regex(/^[a-zA-Z\s\-áéíóúñÁÉÍÓÚÑ]+$/, 'El nombre contiene caracteres inválidos'),
         phone: z.string()
-            .regex(/^[+]?[0-9\s()\-.]{7,20}$/, 'Formato de teléfono inválido')
+            .regex(/^\d{10}$/, 'Debe ser un número de 10 dígitos')
             .optional().or(z.literal('')),
         dob: z.string()
             .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD)')
@@ -118,7 +118,7 @@ export default function SettingsView({ userEmail }: { userEmail: string }) {
                     </div>
                     
                     <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Teléfono (WhatsApp)</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Teléfono</label>
                         <input
                             type="tel"
                             name="phone"

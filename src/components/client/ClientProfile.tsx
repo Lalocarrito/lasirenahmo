@@ -29,9 +29,9 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
     };
 
     const tabs: { id: TabType; label: string; icon: typeof CalendarIcon }[] = [
-        { id: 'appointments', label: 'Mis Citas', icon: CalendarIcon },
+        { id: 'appointments', label: 'Citas', icon: CalendarIcon },
         { id: 'reviews', label: 'Reseñas', icon: Star },
-        { id: 'settings', label: 'Mis Datos', icon: User },
+        { id: 'settings', label: 'Datos', icon: User },
         { id: 'loyalty', label: 'Siren Club', icon: Crown },
     ];
 
@@ -57,17 +57,16 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
 
     return (
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12">
-            
+
             {/* Sidebar Desktop / Navbar Mobile */}
             <aside className="w-full md:w-64 flex-shrink-0">
                 <div className="md:sticky md:top-32 space-y-6">
 
                     <div className="hidden md:block">
-                        <h2 className={`${playfair.className} text-4xl text-foreground mb-1`}>Mi <span className="text-primary italic">Cuenta</span></h2>
-                        <p className="text-muted-foreground text-sm">Gestiona tus preferencias.</p>
+                        <h2 className={`${playfair.className} text-3xl text-foreground`}>Mi <span className="text-primary italic">Cuenta</span></h2>
                     </div>
 
-                    <nav className="flex md:flex-col overflow-x-auto md:overflow-visible gap-2 pb-2 md:pb-0 scrollbar-hide">
+                    <nav className="flex md:flex-col gap-1 pb-2 md:pb-0 scrollbar-hide overflow-x-auto md:overflow-visible">
                         {tabs.map((tab) => {
                             const active = activeTab === tab.id;
                             const Icon = tab.icon;
@@ -76,19 +75,19 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 md:px-5 py-3 md:py-4 rounded-2xl whitespace-nowrap transition-all font-bold text-xs md:text-sm text-left relative overflow-hidden",
+                                        "flex items-center gap-2 px-3 md:px-5 py-2.5 md:py-4 rounded-2xl whitespace-nowrap transition-all font-bold text-xs md:text-sm text-left relative overflow-hidden shrink-0",
                                         active ? "text-primary shadow-sm" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                                     )}
                                 >
                                     {active && (
-                                        <motion.div 
-                                            layoutId="activeTabBg" 
-                                            className="absolute inset-0 bg-primary/10 rounded-2xl" 
+                                        <motion.div
+                                            layoutId="activeTabBg"
+                                            className="absolute inset-0 bg-primary/10 rounded-2xl"
                                             initial={false}
                                             transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                         />
                                     )}
-                                    <Icon size={active ? 18 : 16} className={cn("relative z-10 transition-transform", active && "scale-110")} />
+                                    <Icon size={active ? 18 : 16} className={cn("relative z-10 shrink-0", active && "scale-110")} />
                                     <span className="relative z-10 uppercase tracking-widest">{tab.label}</span>
                                 </button>
                             );
@@ -102,7 +101,7 @@ export default function ClientProfile({ userEmail }: { userEmail: string }) {
                             className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-red-500/5 text-red-500 border border-red-500/20 font-bold text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all group"
                         >
                             <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
-                            Finalizar Sesión
+                            Cerrar sesión
                         </button>
                     </div>
                 </div>
