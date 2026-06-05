@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS services (
   price DECIMAL(10,2) NOT NULL,
   duration TEXT,
   image_url TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -43,7 +44,9 @@ CREATE TABLE IF NOT EXISTS appointments (
   customer_name TEXT NOT NULL,
   customer_email TEXT,
   customer_phone TEXT NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   service_id UUID REFERENCES services(id),
+  price_at_booking DECIMAL(10,2),
   staff_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   appointment_date DATE NOT NULL,
   appointment_time TEXT NOT NULL,
@@ -79,6 +82,20 @@ CREATE TABLE IF NOT EXISTS business_settings (
   value JSONB,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Service Images: Multiple photos per service
+CREATE TABLE IF NOT EXISTS service_images (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  service_id UUID REFERENCES services(id) ON DELETE CASCADE NOT NULL,
+  url TEXT NOT NULL,
+  alt TEXT,
+  sort_order INT DEFAULT 0,
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_service_images_primary
+ON service_images (service_id) WHERE is_primary = true;
 
 -- Reviews: Client testimonials on completed appointments
 CREATE TABLE IF NOT EXISTS reviews (
@@ -117,7 +134,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Spam prevention: max 3 pending appointments per day per email/phone
+-- Spam prevention: max 3 pending appointments per day per user/email/phone
 CREATE OR REPLACE FUNCTION check_appointment_spam()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -129,8 +146,10 @@ BEGIN
     WHERE status = 'pending'
       AND created_at >= NOW() - INTERVAL '1 day'
       AND (
+        (NEW.user_id IS NOT NULL AND user_id = NEW.user_id)
+        OR
         (NEW.customer_email IS NOT NULL AND customer_email = NEW.customer_email)
-        OR 
+        OR
         (NEW.customer_phone IS NOT NULL AND customer_phone = NEW.customer_phone)
       );
 
@@ -168,6 +187,7 @@ ALTER TABLE business_availability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_availability_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_images ENABLE ROW LEVEL SECURITY;
 
 -- =====================
 -- RLS: PROFILES
@@ -235,7 +255,7 @@ DROP POLICY IF EXISTS "Usuarios pueden ver sus propias citas" ON appointments;
 CREATE POLICY "Usuarios pueden ver sus propias citas"
 ON appointments FOR SELECT
 TO authenticated
-USING (customer_email = auth.jwt()->>'email');
+USING (user_id = auth.uid() OR customer_email = auth.jwt()->>'email');
 
 DROP POLICY IF EXISTS "Admins y Staff pueden actualizar citas" ON appointments;
 CREATE POLICY "Admins y Staff pueden actualizar citas"
@@ -277,6 +297,21 @@ CREATE POLICY "Público puede ver servicios" ON services FOR SELECT TO public US
 
 DROP POLICY IF EXISTS "Solo admins pueden modificar servicios" ON services;
 CREATE POLICY "Solo admins pueden modificar servicios" ON services FOR ALL TO authenticated 
+USING (
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+);
+
+-- =====================
+-- RLS: SERVICE IMAGES
+-- =====================
+
+DROP POLICY IF EXISTS "Público puede ver imágenes de servicios" ON service_images;
+CREATE POLICY "Público puede ver imágenes de servicios"
+ON service_images FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Solo admins pueden modificar imágenes de servicios" ON service_images;
+CREATE POLICY "Solo admins pueden modificar imágenes de servicios"
+ON service_images FOR ALL TO authenticated
 USING (
   EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
 );

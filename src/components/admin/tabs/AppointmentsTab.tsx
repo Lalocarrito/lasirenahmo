@@ -2,13 +2,10 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Calendar, Clock, Plus, Loader2, X, CheckCircle, ChevronRight, UserCircle } from 'lucide-react';
-import { startOfDay, parseISO, isBefore, format } from 'date-fns';
+import { Clock, Loader2, X, CheckCircle, UserCircle } from 'lucide-react';
+import { startOfDay, parseISO, isBefore, isAfter, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { formatPhone } from '@/lib/phone';
 import ConfirmModal from '../modals/ConfirmModal';
 
 import type { Appointment, Service } from '@/types';
@@ -32,7 +29,6 @@ export default function AppointmentsTab({
 }: AppointmentsTabProps) {
     const [view, setView] = useState<'upcoming' | 'past'>('upcoming');
     const [page, setPage] = useState(0);
-    const [isAdding, setIsAdding] = useState(false);
 
     const { data, isLoading } = useQuery({
         queryKey: ['admin-appointments', view, page],
@@ -58,18 +54,21 @@ export default function AppointmentsTab({
     const appointments = data || [];
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, action: () => void }>({ isOpen: false, message: '', action: () => { } });
 
-    // Form state
-    const [formName, setFormName] = useState('');
-    const [formPhone, setFormPhone] = useState('');
-    const [formServiceId, setFormServiceId] = useState('');
-    const [formDate, setFormDate] = useState('');
-    const [formTime, setFormTime] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const now = new Date();
+    const today = startOfDay(now);
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const currentTimeStr = format(now, 'HH:mm');
 
-    const today = startOfDay(new Date());
+    const terminalStatuses = ['cancelled', 'no_show'];
 
-    const upcomingAppointments = appointments.filter(a => !isBefore(parseISO(a.appointment_date), today));
-    const pastAppointments = appointments.filter(a => isBefore(parseISO(a.appointment_date), today));
+    function isAppointmentActive(apt: Appointment): boolean {
+        if (terminalStatuses.includes(apt.status)) return false;
+        if (apt.appointment_date === todayStr && apt.appointment_time < currentTimeStr) return false;
+        return true;
+    }
+
+    const upcomingAppointments = appointments.filter(a => !isBefore(parseISO(a.appointment_date), today) && isAppointmentActive(a));
+    const pastAppointments = appointments.filter(a => isBefore(parseISO(a.appointment_date), today) || !isAppointmentActive(a));
 
     const displayedAppointments = view === 'upcoming' ? upcomingAppointments : pastAppointments;
 
@@ -82,34 +81,6 @@ export default function AppointmentsTab({
 
     const sortedDates = Object.keys(grouped).sort();
     if (view === 'past') sortedDates.reverse();
-
-    const handleCreateAppointment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        const { error } = await supabase.from('appointments').insert([{
-            customer_name: formName,
-            customer_phone: formPhone,
-            service_id: formServiceId,
-            appointment_date: formDate,
-            appointment_time: formTime,
-            status: 'confirmed', // Admin manual booking auto-confirms
-            notes: 'Registrada manualmente por admin'
-        }]);
-
-        setIsSubmitting(false);
-        if (!error) {
-            setIsAdding(false);
-            setFormName('');
-            setFormPhone('');
-            setFormDate('');
-            setFormTime('');
-            setFormServiceId('');
-            toast.success('Cita creada exitosamente');
-            fetchData(false);
-        } else {
-            toast.error('Error al crear la cita');
-        }
-    };
 
     return (
         <div className="space-y-6">
@@ -134,13 +105,6 @@ export default function AppointmentsTab({
                         Historial
                     </button>
                 </div>
-
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-bold hover:scale-105 transition-all text-sm shadow-xl shadow-primary/20"
-                >
-                    <Plus size={18} /> Nueva Cita
-                </button>
             </div>
             <div className="grid gap-12">
                 {sortedDates.length === 0 ? (
@@ -167,14 +131,15 @@ export default function AppointmentsTab({
                                         <div key={apt.id} className="admin-card !p-5 group hover:border-primary/40 transition-all flex flex-col justify-between h-full bg-card hover:shadow-xl hover:shadow-primary/5">
                                             <div>
                                                 <div className="flex justify-between items-start mb-4">
-                                                    <span className={cn(
+                                                <span className={cn(
                                                         "px-2 py-1 rounded-full text-[10px] uppercase font-bold",
                                                         apt.status === 'confirmed' ? "bg-green-500/10 text-green-500" :
                                                             apt.status === 'cancelled' ? "bg-red-500/10 text-red-500" :
-                                                                apt.status === 'completed' ? "bg-blue-500/10 text-blue-500" : "bg-yellow-500/10 text-yellow-500"
-                                                    )}>
-                                                        {apt.status === 'confirmed' ? 'Confirmada' : apt.status === 'cancelled' ? 'Cancelada' : apt.status === 'completed' ? 'Completada' : 'Pendiente'}
-                                                    </span>
+                                                                apt.status === 'completed' ? "bg-blue-500/10 text-blue-500" :
+                                                                    apt.status === 'no_show' ? "bg-gray-500/10 text-gray-500" : "bg-yellow-500/10 text-yellow-500"
+                                                )}>
+                                                        {apt.status === 'confirmed' ? 'Confirmada' : apt.status === 'cancelled' ? 'Cancelada' : apt.status === 'completed' ? 'Completada' : apt.status === 'no_show' ? 'No Asistió' : 'Pendiente'}
+                                                </span>
                                                     <div className="flex items-center gap-1.5 text-primary dark:text-pink-400 text-sm font-bold bg-primary/5 px-2 py-1 rounded-lg">
                                                         <Clock size={14} /> {apt.appointment_time}
                                                     </div>
@@ -193,6 +158,9 @@ export default function AppointmentsTab({
                                                 <div className="bg-primary/5 p-3 rounded-xl mb-4 border border-primary/10">
                                                     <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Servicio</p>
                                                     <p className="font-medium text-sm text-primary dark:text-pink-300">{apt.services?.name}</p>
+                                                    {apt.price_at_booking && (
+                                                        <p className="text-[10px] text-muted-foreground mt-1">${apt.price_at_booking}</p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -203,7 +171,7 @@ export default function AppointmentsTab({
                                                 >
                                                     Gestionar
                                                 </button>
-                                                {apt.status !== 'confirmed' && apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                                                {apt.status !== 'confirmed' && apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' && (
                                                     <button
                                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas confirmar esta cita?', action: () => handleUpdateStatus(apt.id, 'confirmed') })}
                                                         className="px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-600 rounded-xl transition-all"
@@ -212,7 +180,7 @@ export default function AppointmentsTab({
                                                         <CheckCircle size={18} />
                                                     </button>
                                                 )}
-                                                {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                                                {apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' && (
                                                     <button
                                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas cancelar esta cita?', action: () => handleUpdateStatus(apt.id, 'cancelled') })}
                                                         className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-xl transition-all"
@@ -251,57 +219,6 @@ export default function AppointmentsTab({
                     Siguiente
                 </button>
             </div>
-
-            <AnimatePresence>
-                {isAdding && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setIsAdding(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative bg-card w-full max-w-md rounded-3xl shadow-2xl p-6 border border-border"
-                        >
-                            <h2 className="text-2xl font-bold font-playfair mb-6">Registrar Cita Manual</h2>
-                            <form onSubmit={handleCreateAppointment} className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Cliente</label>
-                                    <input required value={formName} onChange={e => setFormName(e.target.value)} type="text" className="w-full p-3 rounded-xl border border-border bg-background" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Teléfono</label>
-                                    <input value={formatPhone(formPhone)} onChange={e => setFormPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} type="tel" className="w-full p-3 rounded-xl border border-border bg-background" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Servicio</label>
-                                    <select required value={formServiceId} onChange={e => setFormServiceId(e.target.value)} className="w-full p-3 rounded-xl border border-border bg-background">
-                                        <option value="">Selecciona un servicio</option>
-                                        {services.map(s => <option key={s.id} value={s.id}>{s.name} (${s.price})</option>)}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Fecha</label>
-                                        <input required value={formDate} onChange={e => setFormDate(e.target.value)} type="date" className="w-full p-3 rounded-xl border border-border bg-background" />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-1">Hora</label>
-                                        <input required value={formTime} onChange={e => setFormTime(e.target.value)} type="time" className="w-full p-3 rounded-xl border border-border bg-background" />
-                                    </div>
-                                </div>
-                                <div className="pt-4 flex gap-3">
-                                    <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-3 text-sm font-bold uppercase hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all">Cancelar</button>
-                                    <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-primary text-white text-sm font-bold uppercase rounded-xl transition-all hover:scale-105 shadow-lg shadow-primary/20 flex items-center justify-center">
-                                        {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : 'Guardar'}
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}

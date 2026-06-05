@@ -71,17 +71,22 @@ export default function ManageAppointmentModal({
                                 appointment.status === 'confirmed' ? "bg-green-500/10 text-green-500" :
                                     appointment.status === 'cancelled' ? "bg-red-500/10 text-red-500" :
                                         appointment.status === 'completed' ? "bg-blue-500/10 text-blue-500" :
-                                            "bg-yellow-500/10 text-yellow-500"
+                                            appointment.status === 'no_show' ? "bg-gray-500/10 text-gray-500" :
+                                                "bg-yellow-500/10 text-yellow-500"
                             )}>
                                 {appointment.status === 'confirmed' ? 'Confirmada' :
                                     appointment.status === 'cancelled' ? 'Cancelada' :
-                                        appointment.status === 'completed' ? 'Completada' : 'Pendiente'}
+                                        appointment.status === 'completed' ? 'Completada' :
+                                            appointment.status === 'no_show' ? 'No Asistió' : 'Pendiente'}
                             </span>
                         </div>
 
                         <div>
                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">Servicio</p>
                             <p className="font-bold text-lg text-primary dark:text-pink-400">{appointment.services?.name}</p>
+                            {appointment.price_at_booking && (
+                                <p className="text-xs text-muted-foreground mt-1">Pagó: ${appointment.price_at_booking}</p>
+                            )}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/50">
@@ -114,7 +119,7 @@ export default function ManageAppointmentModal({
 
                     {/* Actions Section */}
                     <div className="space-y-4">
-                        {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+                        {appointment.status !== 'completed' && appointment.status !== 'cancelled' && appointment.status !== 'no_show' && (
                             <div className="space-y-3">
                                 <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest px-2">Acciones</p>
                                 <div className="grid grid-cols-2 gap-3">
@@ -127,6 +132,13 @@ export default function ManageAppointmentModal({
                                             <Calendar size={20} className="mb-1" /> Confirmar
                                         </button>
                                     )}
+                                    <button
+                                        onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas marcar como no asistió?', action: () => onUpdateStatus(appointment.id, 'no_show') })}
+                                        disabled={isLoading}
+                                        className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl bg-gray-500/10 text-gray-600 hover:bg-gray-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm"
+                                    >
+                                        <X size={20} className="mb-1" /> No Asistió
+                                    </button>
                                     <button
                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas cancelar esta cita?', action: () => onUpdateStatus(appointment.id, 'cancelled') })}
                                         disabled={isLoading}

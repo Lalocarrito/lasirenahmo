@@ -17,6 +17,17 @@ export interface Service {
   price: number;
   duration?: string;
   image_url?: string;
+  is_active?: boolean;
+  created_at: string;
+}
+
+export interface ServiceImage {
+  id: string;
+  service_id: string;
+  url: string;
+  alt?: string;
+  sort_order: number;
+  is_primary: boolean;
   created_at: string;
 }
 
@@ -25,15 +36,17 @@ export interface Appointment {
   customer_name: string;
   customer_email?: string;
   customer_phone: string;
+  user_id?: string;
   service_id: string;
+  price_at_booking?: number;
   staff_id: string;
   appointment_date: string;
   appointment_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes?: string;
   created_at: string;
-  services?: Service; // For joined queries
-  profiles?: Profile; // For joined queries
+  services?: Service;
+  profiles?: Profile;
 }
 
 

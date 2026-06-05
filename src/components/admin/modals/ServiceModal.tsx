@@ -1,13 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { X, Loader2, Upload } from 'lucide-react';
+import { X, Loader2, Upload, Star, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Playfair_Display } from 'next/font/google';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
-import type { Service } from '@/types';
+import type { Service, ServiceImage } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
@@ -20,9 +20,13 @@ interface ServiceFormData {
 
 interface ServiceModalProps {
     service: Service;
+    serviceImages: ServiceImage[];
     onClose: () => void;
     onSave: (data: ServiceFormData) => void;
     onUploadImage: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onDeleteImage: (image: ServiceImage) => void;
+    onReorderImage: (image: ServiceImage, direction: 'up' | 'down') => void;
+    onSetPrimary: (image: ServiceImage) => void;
     setService: (service: Service | null) => void;
     isLoading: boolean;
     isUploading: boolean;
@@ -30,9 +34,13 @@ interface ServiceModalProps {
 
 export default function ServiceModal({
     service,
+    serviceImages,
     onClose,
     onSave,
     onUploadImage,
+    onDeleteImage,
+    onReorderImage,
+    onSetPrimary,
     setService,
     isLoading,
     isUploading
@@ -67,6 +75,8 @@ export default function ServiceModal({
             });
         }
     }, [service, reset]);
+
+    const sortedImages = [...serviceImages].sort((a, b) => a.sort_order - b.sort_order);
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -121,49 +131,80 @@ export default function ServiceModal({
                         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-bold text-muted-foreground">Duración (ej: 2h)</label>
-                            <input
-                                {...register('duration')}
-                                type="text"
-                                className="w-full p-3 rounded-xl border border-border bg-primary/5 outline-none focus:border-primary transition-all text-sm"
-                                placeholder="1.5h"
-                            />
-                            {errors.duration && <p className="text-red-500 text-xs mt-1">{errors.duration.message}</p>}
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-bold text-muted-foreground">Imagen</label>
-                            <div className="relative group">
-                                <input
-                                    type="file"
-                                    onChange={onUploadImage}
-                                    className="hidden"
-                                    id="service-image-upload"
-                                    accept="image/*"
-                                />
-                                <label
-                                    htmlFor="service-image-upload"
-                                    className="w-full h-[46px] flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all text-[10px] font-bold uppercase cursor-pointer text-muted-foreground hover:text-primary"
-                                >
-                                    {isUploading ? <Loader2 className="animate-spin" size={16} /> : <><Upload size={16} /> Subir Imagen</>}
-                                </label>
-                            </div>
-                        </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Duración (ej: 2h)</label>
+                        <input
+                            {...register('duration')}
+                            type="text"
+                            className="w-full p-3 rounded-xl border border-border bg-primary/5 outline-none focus:border-primary transition-all text-sm"
+                            placeholder="1.5h"
+                        />
+                        {errors.duration && <p className="text-red-500 text-xs mt-1">{errors.duration.message}</p>}
                     </div>
 
-                    {service.image_url && (
-                        <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
-                            <img src={service.image_url} alt="Vista previa" className="w-full h-full object-cover" />
-                            <button
-                                type="button"
-                                onClick={() => setService({ ...service, image_url: '' })}
-                                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    {/* Gallery */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                            Galería de Fotos {sortedImages.length > 0 && `(${sortedImages.length})`}
+                        </label>
+
+                        {/* Upload button */}
+                        <div className="relative group">
+                            <input
+                                type="file"
+                                onChange={onUploadImage}
+                                className="hidden"
+                                id="service-image-upload"
+                                accept="image/*"
+                            />
+                            <label
+                                htmlFor="service-image-upload"
+                                className="w-full h-[46px] flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all text-[10px] font-bold uppercase cursor-pointer text-muted-foreground hover:text-primary"
                             >
-                                <X size={14} />
-                            </button>
+                                {isUploading ? <Loader2 className="animate-spin" size={16} /> : <><Upload size={16} /> {sortedImages.length === 0 ? 'Subir primera imagen' : 'Agregar más fotos'}</>}
+                            </label>
                         </div>
-                    )}
+
+                        {/* Image grid */}
+                        {sortedImages.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2 mt-2">
+                                {sortedImages.map((img, i) => (
+                                    <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
+                                        <img src={img.url} alt={img.alt || ''} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                                            {i > 0 && (
+                                                <button type="button" onClick={() => onReorderImage(img, 'up')} className="p-1 bg-white/90 rounded-full text-black hover:bg-white transition-colors">
+                                                    <ChevronUp size={14} />
+                                                </button>
+                                            )}
+                                            {i < sortedImages.length - 1 && (
+                                                <button type="button" onClick={() => onReorderImage(img, 'down')} className="p-1 bg-white/90 rounded-full text-black hover:bg-white transition-colors">
+                                                    <ChevronDown size={14} />
+                                                </button>
+                                            )}
+                                            {!img.is_primary && (
+                                                <button type="button" onClick={() => onSetPrimary(img)} className="p-1 bg-yellow-400/90 rounded-full text-black hover:bg-yellow-400 transition-colors" title="Marcar como principal">
+                                                    <Star size={14} />
+                                                </button>
+                                            )}
+                                            <button type="button" onClick={() => onDeleteImage(img)} className="p-1 bg-red-500/90 rounded-full text-white hover:bg-red-500 transition-colors" title="Eliminar">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                        {img.is_primary && (
+                                            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-400 text-[9px] font-bold uppercase rounded-md text-black shadow">
+                                                Principal
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-muted-foreground text-xs italic border border-dashed border-border rounded-xl">
+                                Aún sin fotos. Sube la primera imagen del servicio.
+                            </div>
+                        )}
+                    </div>
 
                     <div className="pt-4">
                         <button

@@ -59,7 +59,7 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
     const loadServices = async () => {
         setIsLoadingServices(true);
         try {
-            const { data } = await supabase.from('services').select('*').order('price', { ascending: false });
+            const { data } = await supabase.from('services').select('*').eq('is_active', true).order('price', { ascending: false });
             setAvailableServices((data || []) as Service[]);
         } catch (e) {
             console.error('Error fetching services in provider:', e);
@@ -200,6 +200,8 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         const { error } = await supabase.from('appointments').insert({
             service_id: selectedService.id,
             staff_id: selectedStaff.id,
+            user_id: user.id,
+            price_at_booking: selectedService.price,
             customer_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente',
             customer_email: user.email,
             customer_phone: customerPhone,
