@@ -10,9 +10,16 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useBooking } from '../BookingContext';
+import { parseDuration } from '@/lib/duration';
 import type { BusinessAvailability, BusinessAvailabilityOverride } from '@/types';
 
 const playfair = Playfair_Display({ subsets: ['latin'] });
+
+interface BlockedRange {
+    date: string;
+    startMinutes: number;
+    endMinutes: number;
+}
 
 // Helper to normalize time strings for comparison (handles "9:00 AM", "09:00 AM", "09:00:00", etc)
 const standardizeTime = (timeStr: string) => {
@@ -29,17 +36,26 @@ const standardizeTime = (timeStr: string) => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+const timeToMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const normalized = standardizeTime(timeStr);
+    if (!normalized) return 0;
+    const [h, m] = normalized.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+};
+
 export default function DateSelection() {
     const {
         selectedDate, setSelectedDate,
         selectedTime, setSelectedTime,
         selectedStaff,
+        selectedService,
         user, setStep, prevStep
     } = useBooking();
 
     const [businessAvailability, setBusinessAvailability] = useState<BusinessAvailability[]>([]);
     const [overrides, setOverrides] = useState<BusinessAvailabilityOverride[]>([]);
-    const [appointments30Days, setAppointments30Days] = useState<string[]>([]);
+    const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
     const [availabilityMap, setAvailabilityMap] = useState<Record<string, boolean>>({});
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
@@ -57,7 +73,7 @@ export default function DateSelection() {
             let overrideQuery = supabase.from('business_availability_overrides').select('*')
                 .gte('override_date', todayStr)
                 .lte('override_date', rangeEnd);
-            let apptQuery = supabase.from('appointments').select('appointment_date, appointment_time')
+            let apptQuery = supabase.from('appointments').select('appointment_date, appointment_time, services(duration)')
                 .gte('appointment_date', todayStr)
                 .lte('appointment_date', rangeEnd)
                 .neq('status', 'cancelled');
@@ -77,20 +93,27 @@ export default function DateSelection() {
             setBusinessAvailability(availRes.data || []);
             setOverrides(overridesRes.data || []);
             
-            // Format appointments for easy lookup: "YYYY-MM-DD|HH:MM"
-            const formattedAppts = (apptsRes.data || []).map(a => 
-                `${a.appointment_date}|${standardizeTime(a.appointment_time)}`
-            );
-            setAppointments30Days(formattedAppts);
+            // Calculate blocked time ranges accounting for service duration
+            const blocked = (apptsRes.data || []).map((a: any) => {
+                const startMinutes = timeToMinutes(a.appointment_time);
+                const durationMinutes = parseDuration(a.services?.duration);
+                return {
+                    date: a.appointment_date,
+                    startMinutes,
+                    endMinutes: startMinutes + durationMinutes,
+                };
+            });
+            setBlockedRanges(blocked);
             setIsLoadingAvailability(false);
         };
         fetchData();
     }, [selectedStaff]);
 
-    // Pre-calculate 30 days availability map
+    // Pre-calculate availability map for all days
     useEffect(() => {
         if (isLoadingAvailability || businessAvailability.length === 0) return;
 
+        const serviceDuration = parseDuration(selectedService?.duration);
         const map: Record<string, boolean> = {};
         const today = startOfDay(new Date());
         const now = new Date();
@@ -101,7 +124,7 @@ export default function DateSelection() {
             const isToday = i === 0;
 
             const override = overrides.find(o => o.override_date === dateStr);
-            let dayConfigs = [];
+            let dayConfigs: { start_time: string; end_time: string }[] = [];
 
             if (override) {
                 if (override.is_off_day) {
@@ -120,44 +143,40 @@ export default function DateSelection() {
                 continue;
             }
 
-            // Check if at least one slot is free
+            // Check if at least one slot of serviceDuration fits
             let hasAnySlot = false;
             for (const config of dayConfigs) {
                 const [startH, startM] = config.start_time.split(':').map(Number);
                 const [endH, endM] = config.end_time.split(':').map(Number);
+                const dayStartMinutes = startH * 60 + startM;
+                const dayEndMinutes = endH * 60 + endM;
 
-                let currentH = startH;
-                let currentM = startM;
+                for (let slotStart = dayStartMinutes; slotStart + serviceDuration <= dayEndMinutes; slotStart += 60) {
+                    const slotEnd = slotStart + serviceDuration;
 
-                while (currentH < endH || (currentH === endH && currentM < endM)) {
-                    const period = currentH >= 12 ? 'PM' : 'AM';
-                    const displayH = currentH > 12 ? currentH - 12 : (currentH === 0 ? 12 : currentH);
-                    const slot = `${displayH}:${String(currentM).padStart(2, '0')} ${period}`;
-                    const normalizedSlot = standardizeTime(slot);
-                    
-                    const isBooked = appointments30Days.includes(`${dateStr}|${normalizedSlot}`);
+                    // Check overlap with any existing appointment (considering their duration)
+                    const isBlocked = blockedRanges.some(br =>
+                        br.date === dateStr && br.startMinutes < slotEnd && br.endMinutes > slotStart
+                    );
+
                     let isForward = true;
                     if (isToday) {
-                        const [slotH, slotM] = normalizedSlot.split(':').map(Number);
-                        if (slotH < now.getHours() || (slotH === now.getHours() && slotM <= now.getMinutes())) {
+                        if (slotStart <= now.getHours() * 60 + now.getMinutes()) {
                             isForward = false;
                         }
                     }
 
-                    if (!isBooked && isForward) {
+                    if (!isBlocked && isForward) {
                         hasAnySlot = true;
                         break;
                     }
-
-                    currentM += 60;
-                    if (currentM >= 60) { currentM = 0; currentH += 1; }
                 }
                 if (hasAnySlot) break;
             }
             map[dateStr] = hasAnySlot;
         }
         setAvailabilityMap(map);
-    }, [businessAvailability, overrides, appointments30Days, isLoadingAvailability]);
+    }, [businessAvailability, overrides, blockedRanges, isLoadingAvailability, selectedService?.duration]);
 
     // Calculate slots for specifically SELECTED date
     useEffect(() => {
@@ -166,13 +185,15 @@ export default function DateSelection() {
             return;
         }
 
+        const serviceDuration = parseDuration(selectedService?.duration);
+
         const calculateSlots = () => {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
             const now = new Date();
             const isToday = isSameDay(selectedDate, now);
 
             const override = overrides.find(o => o.override_date === dateStr);
-            let dayConfigs = [];
+            let dayConfigs: { start_time: string; end_time: string }[] = [];
 
             if (override) {
                 if (override.is_off_day) { setAvailableSlots([]); return; }
@@ -189,27 +210,32 @@ export default function DateSelection() {
             dayConfigs.forEach(config => {
                 const [startH, startM] = config.start_time.split(':').map(Number);
                 const [endH, endM] = config.end_time.split(':').map(Number);
-                let currentH = startH; let currentM = startM;
+                const dayStartMinutes = startH * 60 + startM;
+                const dayEndMinutes = endH * 60 + endM;
 
-                while (currentH < endH || (currentH === endH && currentM < endM)) {
-                    const period = currentH >= 12 ? 'PM' : 'AM';
-                    const displayH = currentH > 12 ? currentH - 12 : (currentH === 0 ? 12 : currentH);
-                    const slot = `${displayH}:${String(currentM).padStart(2, '0')} ${period}`;
-                    const normalizedSlot = standardizeTime(slot);
-                    
-                    const isBooked = appointments30Days.includes(`${dateStr}|${normalizedSlot}`);
+                // Generate candidate slots at 60-min intervals
+                for (let slotStartMinutes = dayStartMinutes; slotStartMinutes + serviceDuration <= dayEndMinutes; slotStartMinutes += 60) {
+                    const slotEndMinutes = slotStartMinutes + serviceDuration;
+
+                    // Check if the ENTIRE duration block overlaps with any existing appointment
+                    const isBlocked = blockedRanges.some(br =>
+                        br.date === dateStr && br.startMinutes < slotEndMinutes && br.endMinutes > slotStartMinutes
+                    );
+
                     let isForward = true;
                     if (isToday) {
-                        const [slotH, slotM] = normalizedSlot.split(':').map(Number);
-                        if (slotH < now.getHours() || (slotH === now.getHours() && slotM <= now.getMinutes())) {
+                        if (slotStartMinutes <= now.getHours() * 60 + now.getMinutes()) {
                             isForward = false;
                         }
                     }
 
-                    if (!isBooked && isForward) allSlots.push(slot);
-
-                    currentM += 60;
-                    if (currentM >= 60) { currentM = 0; currentH += 1; }
+                    if (!isBlocked && isForward) {
+                        const h = Math.floor(slotStartMinutes / 60);
+                        const m = slotStartMinutes % 60;
+                        const period = h >= 12 ? 'PM' : 'AM';
+                        const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+                        allSlots.push(`${displayH}:${String(m).padStart(2, '0')} ${period}`);
+                    }
                 }
             });
 
@@ -217,7 +243,7 @@ export default function DateSelection() {
         };
 
         calculateSlots();
-    }, [selectedDate, businessAvailability, overrides, appointments30Days]);
+    }, [selectedDate, businessAvailability, overrides, blockedRanges, selectedService?.duration]);
 
 
 

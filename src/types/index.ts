@@ -44,6 +44,8 @@ export interface Appointment {
   appointment_time: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes?: string;
+  confirmation_token?: string;
+  reminder_sent_at?: string;
   created_at: string;
   services?: Service;
   profiles?: Profile;

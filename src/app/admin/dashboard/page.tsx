@@ -127,7 +127,13 @@ export default function AdminDashboard() {
         queryKey: ['appointments'],
         queryFn: async () => {
             if (!isAuthorized) return [];
-            const { data } = await supabase.from('appointments').select('*, services(*)').order('appointment_date', { ascending: true });
+            const threeMonthsAgo = format(addDays(new Date(), -90), 'yyyy-MM-dd');
+            const sixMonthsAhead = format(addDays(new Date(), 180), 'yyyy-MM-dd');
+            const { data } = await supabase.from('appointments')
+                .select('*, services(*)')
+                .gte('appointment_date', threeMonthsAgo)
+                .lte('appointment_date', sixMonthsAhead)
+                .order('appointment_date', { ascending: true });
             return (data || []) as Appointment[];
         },
         enabled: !!isAuthorized,
@@ -162,6 +168,26 @@ export default function AdminDashboard() {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         router.replace('/admin');
+    };
+
+    const handleSendReminder = async (appointmentId: string) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/reminders/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Recordatorio enviado');
+            } else {
+                toast.error(data.error || 'Error al enviar');
+            }
+        } catch {
+            toast.error('Error de conexión');
+        }
+        setIsLoading(false);
     };
 
     const [renameWarning, setRenameWarning] = useState<string | null>(null);
@@ -337,9 +363,18 @@ export default function AdminDashboard() {
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
             <aside className="w-full md:w-64 bg-card border-b md:border-r border-border p-6 flex flex-col gap-8 z-50">
-                <div className="flex items-center gap-3">
-                    <img src="/icon1.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg border border-primary/10 object-cover" />
-                    <span className={`${playfair.className} text-xl tracking-tight text-primary`}>La <span className="italic">Sirena</span></span>
+                <div className="flex items-center justify-between md:justify-start gap-3">
+                    <img src="/icon1.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg border border-primary/10 object-cover shrink-0" />
+                    <div className="flex items-center gap-1 md:hidden">
+                        <button onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                            className="p-2 rounded-full bg-primary/5 text-primary hover:bg-primary/10 transition-all">
+                            {mounted && resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        </button>
+                        <button onClick={handleLogout}
+                            className="p-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all">
+                            <LogOut size={18} />
+                        </button>
+                    </div>
                 </div>
                 <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 scrollbar-hide">
                     {TABS.filter(t => profile?.role === 'staff' ? ['Overview', 'Citas', 'Disponibilidad'].includes(t.name) : true).map((tab) => (
@@ -418,7 +453,8 @@ export default function AdminDashboard() {
             <AnimatePresence>
                 {managingAppointment && (
                     <ManageAppointmentModal appointment={managingAppointment} onClose={() => setManagingAppointment(null)}
-                        onUpdateStatus={handleUpdateStatus} onFrequentAppointment={handleFrequentAppointment} isLoading={isLoading} />
+                        onUpdateStatus={handleUpdateStatus} onFrequentAppointment={handleFrequentAppointment}
+                        onSendReminder={handleSendReminder} isLoading={isLoading} />
                 )}
             </AnimatePresence>
             <ConfirmModal isOpen={!!renameWarning} title="Renombrar Servicio" message={renameWarning || ''}

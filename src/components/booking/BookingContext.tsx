@@ -197,6 +197,8 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         const appointmentDateStr = format(selectedDate, 'yyyy-MM-dd');
         const customerPhone = extraData?.phone || user.user_metadata?.phone || '';
 
+        const confirmationToken = crypto.randomUUID();
+
         const { error } = await supabase.from('appointments').insert({
             service_id: selectedService.id,
             staff_id: selectedStaff.id,
@@ -208,7 +210,8 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
             appointment_date: appointmentDateStr,
             appointment_time: selectedTime,
             notes: notes,
-            status: 'pending'
+            status: 'pending',
+            confirmation_token: confirmationToken,
         });
 
         if (!error && extraData?.phone) {

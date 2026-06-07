@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { motion } from 'framer-motion';
-import { X, Calendar, Loader2, Users } from 'lucide-react';
+import { X, Calendar, Loader2, Users, MessageCircle } from 'lucide-react';
 import { Playfair_Display } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import type { Appointment } from '@/types';
@@ -15,6 +15,7 @@ interface ManageAppointmentModalProps {
     onClose: () => void;
     onUpdateStatus: (id: string, status: string) => void;
     onFrequentAppointment: (appointment: Appointment, days: number) => void;
+    onSendReminder: (id: string) => Promise<void>;
     isLoading: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function ManageAppointmentModal({
     onClose,
     onUpdateStatus,
     onFrequentAppointment,
+    onSendReminder,
     isLoading
 }: ManageAppointmentModalProps) {
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, action: () => void }>({ isOpen: false, message: '', action: () => { } });
@@ -116,6 +118,18 @@ export default function ManageAppointmentModal({
                         
                         <p className="text-[9px] text-muted-foreground/50 font-bold uppercase text-right pt-2">ID: {appointment.id.slice(0, 8)}</p>
                     </div>
+
+                    {/* WhatsApp Reminder */}
+                    {appointment.confirmation_token && appointment.customer_phone && (
+                        <button
+                            onClick={() => onSendReminder(appointment.id)}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm"
+                        >
+                            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={18} />}
+                            {appointment.reminder_sent_at ? 'Reenviar recordatorio WhatsApp' : 'Enviar recordatorio WhatsApp'}
+                        </button>
+                    )}
 
                     {/* Actions Section */}
                     <div className="space-y-4">
