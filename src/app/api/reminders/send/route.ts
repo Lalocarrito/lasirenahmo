@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   const date = new Date(appointment.appointment_date + 'T00:00:00').toLocaleDateString('es-MX', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
-  const confirmLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lasirenahmo.com'}/api/reminders/confirm?token=${appointment.confirmation_token}`;
+  const confirmLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://lasirenahmo.com'}/confirmar?token=${appointment.confirmation_token}`;
 
   const message = `Hola ${appointment.customer_name.split(' ')[0]}! Te recordamos tu cita en La Sirena:
 
