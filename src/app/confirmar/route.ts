@@ -53,6 +53,7 @@ async function handleRequest(request: NextRequest) {
       body: `${appointment.customer_name?.split(' ')[0] || 'Tu'}, ya habías confirmado esta cita.`,
       detail: formatDate(appointment.appointment_date, appointment.appointment_time),
       icon: 'check',
+      showMap: true,
     }), {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
@@ -164,7 +165,6 @@ function page(request: NextRequest, props: PageProps): string {
     body{background:var(--bg);color:var(--fg);font-family:'Outfit',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background-image:radial-gradient(at 0% 0%,var(--mesh-1) 0px,transparent 50%),radial-gradient(at 50% 0%,var(--mesh-2) 0px,transparent 50%),radial-gradient(at 100% 0%,var(--mesh-3) 0px,transparent 50%);background-color:var(--bg)}
     .card{background:rgba(255,255,255,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);border-radius:2rem;padding:2.5rem;max-width:440px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.06);text-align:center}
     @media(prefers-color-scheme:dark){.card{background:rgba(30,41,59,.4);border-color:rgba(51,65,85,.3)}}
-    .logo{width:3.5rem;height:3.5rem;border-radius:.75rem;margin:0 auto 1.5rem;display:block}
     .icon-wrap{width:4.5rem;height:4.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
     .icon-wrap.green{background:rgba(22,163,74,.1)}
     .icon-wrap.red{background:rgba(220,38,38,.1)}
@@ -188,7 +188,6 @@ function page(request: NextRequest, props: PageProps): string {
 </head>
 <body>
   <div class="card">
-    <img src="/icon1.png" alt="La Sirena" class="logo">
     <div class="icon-wrap ${props.icon === 'check' ? 'green' : props.icon === 'error' || props.icon === 'cancel' ? 'red' : 'pink'}">${icons[props.icon]}</div>
     <h1 class="${props.icon === 'pending' ? 'i' : ''}">${props.title}</h1>
     <p>${props.body}</p>
