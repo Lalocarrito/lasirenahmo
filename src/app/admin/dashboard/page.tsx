@@ -114,7 +114,10 @@ export default function AdminDashboard() {
 
         const channel = supabase.channel('admin-appointments-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' },
-                () => queryClient.invalidateQueries({ queryKey: ['appointments'] })
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+                    queryClient.invalidateQueries({ queryKey: ['admin-appointments'] });
+                }
             ).subscribe();
 
         return () => {
@@ -137,7 +140,8 @@ export default function AdminDashboard() {
             return (data || []) as Appointment[];
         },
         enabled: !!isAuthorized,
-        staleTime: 30000,
+        staleTime: 10000,
+        refetchInterval: 60000,
     });
 
     const { data: services = [] } = useQuery<Service[]>({
@@ -427,7 +431,7 @@ export default function AdminDashboard() {
                         <CatalogTab services={services} setEditingService={setEditingService} onToggleActive={handleToggleServiceActive} onDelete={handleDeleteService} />
                     )}
                     {activeTab === 'Citas' && (
-                        <AppointmentsTab services={services} setManagingAppointment={setManagingAppointment} handleUpdateStatus={handleUpdateStatus} fetchData={fetchData} />
+                        <AppointmentsTab services={services} setManagingAppointment={setManagingAppointment} handleUpdateStatus={handleUpdateStatus} onSendReminder={handleSendReminder} fetchData={fetchData} />
                     )}
                     {activeTab === 'Clientes' && profile?.role === 'admin' && (
                         <ClientsTab appointments={appointments} />

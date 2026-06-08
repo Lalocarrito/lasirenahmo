@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Clock, Loader2, X, CheckCircle, UserCircle } from 'lucide-react';
+import { Clock, Loader2, X, CheckCircle, UserCircle, MessageCircle } from 'lucide-react';
 import { startOfDay, parseISO, isBefore, isAfter, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,7 @@ interface AppointmentsTabProps {
     services: Service[];
     setManagingAppointment: (appointment: Appointment) => void;
     handleUpdateStatus: (id: string, status: string) => void;
+    onSendReminder: (id: string) => Promise<void>;
     fetchData: (loader?: boolean) => void;
 }
 
@@ -25,6 +26,7 @@ export default function AppointmentsTab({
     services,
     setManagingAppointment,
     handleUpdateStatus,
+    onSendReminder,
     fetchData
 }: AppointmentsTabProps) {
     const [view, setView] = useState<'upcoming' | 'past'>('upcoming');
@@ -171,7 +173,15 @@ export default function AppointmentsTab({
                                                 >
                                                     Gestionar
                                                 </button>
-                                                {apt.status !== 'confirmed' && apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' && (
+                                                {apt.status !== 'confirmed' && apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' && apt.confirmation_token && apt.customer_phone ? (
+                                                    <button
+                                                        onClick={() => onSendReminder(apt.id)}
+                                                        className="px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-600 rounded-xl transition-all"
+                                                        title="Enviar WhatsApp"
+                                                    >
+                                                        <MessageCircle size={18} />
+                                                    </button>
+                                                ) : apt.status !== 'confirmed' && apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' ? (
                                                     <button
                                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas confirmar esta cita?', action: () => handleUpdateStatus(apt.id, 'confirmed') })}
                                                         className="px-3 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-600 rounded-xl transition-all"
@@ -179,16 +189,7 @@ export default function AppointmentsTab({
                                                     >
                                                         <CheckCircle size={18} />
                                                     </button>
-                                                )}
-                                                {apt.status !== 'cancelled' && apt.status !== 'completed' && apt.status !== 'no_show' && (
-                                                    <button
-                                                        onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas cancelar esta cita?', action: () => handleUpdateStatus(apt.id, 'cancelled') })}
-                                                        className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-xl transition-all"
-                                                        title="Cancelar rápido"
-                                                    >
-                                                        <X size={18} />
-                                                    </button>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </div>
                                     ))}

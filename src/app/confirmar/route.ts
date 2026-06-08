@@ -163,7 +163,7 @@ function page(request: NextRequest, props: PageProps): string {
     :root{--bg:#ffffff;--fg:#111827;--primary:#db2777;--pink:#f472b6;--card:#ffffff;--border:#e2e8f0;--muted:#64748b;--mesh-1:hsla(328,100%,95%,1);--mesh-2:hsla(328,70%,90%,1);--mesh-3:hsla(45,100%,90%,1)}
     @media(prefers-color-scheme:dark){:root{--bg:#0f172a;--fg:#f8fafc;--card:#1e293b;--border:#334155;--muted:#94a3b8;--mesh-1:hsla(328,50%,10%,1);--mesh-2:hsla(328,30%,15%,1);--mesh-3:hsla(220,50%,10%,1)}}
     body{background:var(--bg);color:var(--fg);font-family:'Outfit',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background-image:radial-gradient(at 0% 0%,var(--mesh-1) 0px,transparent 50%),radial-gradient(at 50% 0%,var(--mesh-2) 0px,transparent 50%),radial-gradient(at 100% 0%,var(--mesh-3) 0px,transparent 50%);background-color:var(--bg)}
-    .card{background:rgba(255,255,255,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);border-radius:2rem;padding:2.5rem;max-width:440px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.06);text-align:center}
+    .card{  background:rgba(255,255,255,.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);border-radius:2rem;padding:2.5rem;max-width:440px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.06);text-align:center}
     @media(prefers-color-scheme:dark){.card{background:rgba(30,41,59,.4);border-color:rgba(51,65,85,.3)}}
     .icon-wrap{width:4.5rem;height:4.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
     .icon-wrap.green{background:rgba(22,163,74,.1)}
@@ -184,7 +184,20 @@ function page(request: NextRequest, props: PageProps): string {
     .btn-p:hover{transform:scale(1.03);box-shadow:0 8px 25px rgba(219,39,119,.5)}
     .btn-o{background:transparent;border:2px solid rgba(220,38,38,.2);color:#dc2626}
     .btn-o:hover{background:rgba(220,38,38,.08)}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100;padding:1.5rem}
+    .overlay.show{display:flex}
+    .modal{background:var(--card);border-radius:2rem;padding:2rem;max-width:400px;width:100%;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+    .modal h2{font-family:'Playfair Display',Georgia,serif;font-size:1.25rem;margin-bottom:.75rem;color:var(--fg)}
+    .modal p{font-size:.875rem;margin-bottom:1.5rem}
+    .modal .btns{display:flex;gap:.75rem}
+    .modal .btns .btn{flex:1;font-size:.75rem}
+    .modal .btns .btn-r{flex:1;padding:.875rem;border-radius:1rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;border:none;cursor:pointer;font-family:'Outfit',system-ui,sans-serif;background:#dc2626;color:#fff;transition:all .3s}
+    .modal .btns .btn-r:hover{transform:scale(1.03)}
   </style>
+  <script>
+    function showCancelModal(){document.getElementById('cancelModal').classList.add('show')}
+    function hideCancelModal(){document.getElementById('cancelModal').classList.remove('show')}
+  </script>
 </head>
 <body>
   <div class="card">
@@ -193,8 +206,21 @@ function page(request: NextRequest, props: PageProps): string {
     <p>${props.body}</p>
     ${props.detail ? `<div class="dc"><div class="r"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="l">Cita</div><div>${props.detail}</div></div></div></div>` : ''}
     ${props.showMap ? `<div class="map-wrap"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3485.2876102415335!2d-110.9613469!3d29.1166554!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x86ce86c6a38b3c37%3A0x9cd9e4f3b1e9c9a5!2sC.%20Juan%20de%20Dios%20Boj%C3%B3rquez%20128b%2C%20Sonacer%2C%2083174%20Hermosillo%2C%20Son.!5e0!3m2!1ses-419!2smx!4v1" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>` : ''}
-    ${props.token ? `<div class="bg"><a href="${origin}/confirmar?token=${props.token}&action=confirm" class="btn btn-p"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar mi cita</a><a href="${origin}/confirmar?token=${props.token}&action=cancel" class="btn btn-o"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Cancelar cita</a></div>` : ''}
+    ${props.icon === 'pending' && props.token ? `<div class="bg"><a href="${origin}/confirmar?token=${props.token}&action=confirm" class="btn btn-p"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar mi cita</a><button onclick="showCancelModal()" class="btn btn-o"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Cancelar cita</button></div>` : ''}
   </div>
+
+  ${props.icon === 'pending' && props.token ? `
+  <div id="cancelModal" class="overlay" onclick="if(event.target===this)hideCancelModal()">
+    <div class="modal">
+      <h2>¿Cancelar cita?</h2>
+      <p>Se cancelará tu cita en La Sirena. ¿Estás segura?</p>
+      ${props.detail ? `<div class="dc" style="text-align:left;font-size:.8125rem"><div class="r"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="l">Cita</div><div>${props.detail}</div></div></div></div>` : ''}
+      <div class="btns">
+        <button onclick="hideCancelModal()" class="btn btn-p" style="flex:1;font-size:.75rem">No, mantener</button>
+        <a href="${origin}/confirmar?token=${props.token}&action=cancel" class="btn btn-r">Sí, cancelar</a>
+      </div>
+    </div>
+  </div>` : ''}
 </body>
 </html>`;
 }

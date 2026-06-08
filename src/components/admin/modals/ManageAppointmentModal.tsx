@@ -119,25 +119,22 @@ export default function ManageAppointmentModal({
                         <p className="text-[9px] text-muted-foreground/50 font-bold uppercase text-right pt-2">ID: {appointment.id.slice(0, 8)}</p>
                     </div>
 
-                    {/* WhatsApp Reminder */}
-                    {appointment.confirmation_token && appointment.customer_phone && (
-                        <button
-                            onClick={() => onSendReminder(appointment.id)}
-                            disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm"
-                        >
-                            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <MessageCircle size={18} />}
-                            {appointment.reminder_sent_at ? 'Reenviar recordatorio WhatsApp' : 'Enviar recordatorio WhatsApp'}
-                        </button>
-                    )}
-
                     {/* Actions Section */}
                     <div className="space-y-4">
                         {appointment.status !== 'completed' && appointment.status !== 'cancelled' && appointment.status !== 'no_show' && (
                             <div className="space-y-3">
                                 <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest px-2">Acciones</p>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {appointment.status !== 'confirmed' && (
+                                    {appointment.status !== 'confirmed' && appointment.confirmation_token && appointment.customer_phone ? (
+                                        <button
+                                            onClick={() => onSendReminder(appointment.id)}
+                                            disabled={isLoading}
+                                            className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm col-span-2"
+                                        >
+                                            {isLoading ? <Loader2 size={20} className="animate-spin mb-1" /> : <MessageCircle size={20} className="mb-1" />}
+                                            {appointment.reminder_sent_at ? 'Reenviar WhatsApp' : 'Enviar WhatsApp'}
+                                        </button>
+                                    ) : appointment.status !== 'confirmed' ? (
                                         <button
                                             onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas confirmar esta cita?', action: () => onUpdateStatus(appointment.id, 'confirmed') })}
                                             disabled={isLoading}
@@ -145,7 +142,7 @@ export default function ManageAppointmentModal({
                                         >
                                             <Calendar size={20} className="mb-1" /> Confirmar
                                         </button>
-                                    )}
+                                    ) : null}
                                     <button
                                         onClick={() => setConfirmModal({ isOpen: true, message: '¿Segura que deseas marcar como no asistió?', action: () => onUpdateStatus(appointment.id, 'no_show') })}
                                         disabled={isLoading}
