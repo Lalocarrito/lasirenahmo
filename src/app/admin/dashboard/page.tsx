@@ -38,12 +38,12 @@ import StaffTab from '@/components/admin/tabs/StaffTab';
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700'] });
 
 const TABS = [
-    { name: 'Overview', icon: LayoutDashboard },
-    { name: 'Citas', icon: Calendar },
-    { name: 'Clientes', icon: Users },
-    { name: 'Catálogo', icon: List },
-    { name: 'Equipo', icon: Users },
-    { name: 'Disponibilidad', icon: Settings },
+    { name: 'Overview', slug: 'overview', icon: LayoutDashboard },
+    { name: 'Citas', slug: 'citas', icon: Calendar },
+    { name: 'Clientes', slug: 'clientes', icon: Users },
+    { name: 'Catálogo', slug: 'catalogo', icon: List },
+    { name: 'Equipo', slug: 'equipo', icon: Users },
+    { name: 'Disponibilidad', slug: 'disponibilidad', icon: Settings },
 ];
 
 interface ServiceFormData {
@@ -69,19 +69,22 @@ export default function AdminDashboard() {
     const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
     const queryClient = useQueryClient();
 
-    // Restore activeTab from URL on mount — no hydration mismatch because useState default is 'Overview'
+    // Restore activeTab from URL on mount
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        if (tab && TABS.some(t => t.name === tab)) {
-            setActiveTab(tab);
+        const slug = params.get('tab');
+        if (slug) {
+            const match = TABS.find(t => t.slug === slug);
+            if (match) setActiveTab(match.name);
         }
     }, []);
 
     const handleTabChange = (tabName: string) => {
         setActiveTab(tabName);
+        const tab = TABS.find(t => t.name === tabName);
+        if (!tab) return;
         const url = new URL(window.location.href);
-        url.searchParams.set('tab', tabName);
+        url.searchParams.set('tab', tab.slug);
         window.history.replaceState({}, '', url.toString());
     };
 
@@ -174,8 +177,11 @@ export default function AdminDashboard() {
         router.replace('/admin');
     };
 
+    const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+
     const handleSendReminder = async (appointmentId: string) => {
-        setIsLoading(true);
+        if (sendingReminderId) return;
+        setSendingReminderId(appointmentId);
         try {
             const res = await fetch('/api/reminders/send', {
                 method: 'POST',
@@ -185,13 +191,14 @@ export default function AdminDashboard() {
             const data = await res.json();
             if (data.success) {
                 toast.success('Recordatorio enviado');
+                fetchData();
             } else {
                 toast.error(data.error || 'Error al enviar');
             }
         } catch {
             toast.error('Error de conexión');
         }
-        setIsLoading(false);
+        setSendingReminderId(null);
     };
 
     const [renameWarning, setRenameWarning] = useState<string | null>(null);
@@ -313,9 +320,14 @@ export default function AdminDashboard() {
         if (!uploadError) {
             const { data: { publicUrl } } = supabase.storage.from('services').getPublicUrl(filePath);
             const maxOrder = serviceImages.reduce((max, img) => Math.max(max, img.sort_order), -1);
-            await supabase.from('service_images').insert([{ service_id: editingService.id, url: publicUrl, sort_order: maxOrder + 1, is_primary: serviceImages.length === 0 }]);
+            const isFirst = serviceImages.length === 0;
+            await supabase.from('service_images').insert([{ service_id: editingService.id, url: publicUrl, sort_order: maxOrder + 1, is_primary: isFirst }]);
+            if (isFirst) {
+                await supabase.from('services').update({ image_url: publicUrl }).eq('id', editingService.id);
+            }
             const { data } = await supabase.from('service_images').select('*').eq('service_id', editingService.id).order('sort_order', { ascending: true });
             setServiceImages((data || []) as ServiceImage[]);
+            fetchData();
         }
         setIsUploading(false);
     };
@@ -342,11 +354,16 @@ export default function AdminDashboard() {
     };
 
     const handleSetPrimaryServiceImage = async (image: ServiceImage) => {
-        await supabase.from('service_images').update({ is_primary: false }).eq('service_id', image.service_id);
+        const { error: imgErr } = await supabase.from('service_images').update({ is_primary: false }).eq('service_id', image.service_id);
+        if (imgErr) { toast.error('Error al actualizar imágenes'); return; }
         await supabase.from('service_images').update({ is_primary: true }).eq('id', image.id);
         await supabase.from('services').update({ image_url: image.url }).eq('id', image.service_id);
+        if (editingService) {
+            setEditingService({ ...editingService, image_url: image.url });
+        }
         const { data } = await supabase.from('service_images').select('*').eq('service_id', editingService!.id).order('sort_order', { ascending: true });
         setServiceImages((data || []) as ServiceImage[]);
+        fetchData();
     };
 
     const handleFrequentAppointment = async (appointment: Appointment, days: number) => {

@@ -111,6 +111,7 @@ export default function BookingSummary() {
                                 src="/icon1.png" 
                                 alt="La Sirena Logo" 
                                 fill 
+                                sizes="64px"
                                 className="object-cover" 
                                 priority
                             />

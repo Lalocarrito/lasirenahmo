@@ -38,6 +38,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Esta cita no tiene token de confirmación' }, { status: 400 });
   }
 
+  // Rate limiting: prevent sending more than once every 5 minutes
+  if (appointment.reminder_sent_at) {
+    const lastSent = new Date(appointment.reminder_sent_at).getTime();
+    const now = Date.now();
+    if (now - lastSent < 5 * 60 * 1000) {
+      const remaining = Math.ceil((5 * 60 * 1000 - (now - lastSent)) / 1000);
+      return NextResponse.json({ error: `Espera ${remaining}s antes de reenviar` }, { status: 429 });
+    }
+  }
+
   const phoneDigits = appointment.customer_phone?.replace(/\D/g, '') || '';
   if (!phoneDigits) {
     return NextResponse.json({ error: 'La cita no tiene teléfono' }, { status: 400 });

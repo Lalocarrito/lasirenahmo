@@ -5,14 +5,19 @@ import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 
 export default function LoyaltyView() {
-    const { data: profile, isLoading } = useQuery({
+    const { data: profile, isLoading, isError } = useQuery({
         queryKey: ['user-loyalty'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
-            const { data } = await supabase.from('profiles').select('loyalty_points').eq('id', user.id).single();
+            const { data, error } = await supabase.from('profiles').select('loyalty_points').eq('id', user.id).single();
+            if (error) {
+                if (error.code === '42703') return { loyalty_points: 0 };
+                throw error;
+            }
             return data;
-        }
+        },
+        retry: false,
     });
 
     if (isLoading) {

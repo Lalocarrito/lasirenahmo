@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   avatar_url TEXT,
   bio TEXT,
   specialty TEXT,
-  is_visible BOOLEAN DEFAULT true
+  is_visible BOOLEAN DEFAULT true,
+  loyalty_points INTEGER DEFAULT 0
 );
 
 -- Services: Catalog of eyelash services

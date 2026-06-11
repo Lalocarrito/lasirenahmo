@@ -129,7 +129,12 @@ export default function ManageAppointmentModal({
                                         <button
                                             onClick={() => onSendReminder(appointment.id)}
                                             disabled={isLoading}
-                                            className="flex flex-col items-center justify-center gap-1 p-3 rounded-2xl bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white transition-all text-[11px] font-bold uppercase shadow-sm col-span-2"
+                                            className={cn(
+                                                "flex flex-col items-center justify-center gap-1 p-3 rounded-2xl transition-all text-[11px] font-bold uppercase shadow-sm col-span-2",
+                                                appointment.reminder_sent_at
+                                                    ? "bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white"
+                                                    : "bg-green-500/10 text-green-600 hover:bg-green-500 hover:text-white"
+                                            )}
                                         >
                                             {isLoading ? <Loader2 size={20} className="animate-spin mb-1" /> : <MessageCircle size={20} className="mb-1" />}
                                             {appointment.reminder_sent_at ? 'Reenviar WhatsApp' : 'Enviar WhatsApp'}

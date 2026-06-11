@@ -27,7 +27,7 @@ function BookingFlowContent() {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto px-4 py-12">
+        <div id="booking-container" className="w-full max-w-4xl mx-auto px-4 py-12">
             {/* Header & Navigation */}
             <div className="flex flex-col gap-6 mb-12" id="booking-flow-header">
                 <div className="flex justify-end items-center h-2" />

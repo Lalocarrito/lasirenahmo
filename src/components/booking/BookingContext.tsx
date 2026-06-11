@@ -136,6 +136,15 @@ export function BookingProvider({ children, initialStep = 1 }: { children: React
         return () => subscription.unsubscribe();
     }, [router]);
 
+    // Auto-scroll to booking container when step changes
+    useEffect(() => {
+        if (!isInitialized) return;
+        const el = document.getElementById('booking-container');
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [bookingState.step, isInitialized]);
+
     // Save to sessionStorage on changes
     useEffect(() => {
         if (!isInitialized) return;
