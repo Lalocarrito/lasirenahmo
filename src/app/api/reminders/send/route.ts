@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { sendWhatsApp } from '@/lib/whatsapp';
+import { sendWhatsApp, checkWhatsAppNumber } from '@/lib/whatsapp';
+import { toInternationalFormat } from '@/lib/phone';
 
 export async function POST(request: NextRequest) {
   const { appointmentId } = await request.json();
@@ -53,7 +54,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'La cita no tiene teléfono' }, { status: 400 });
   }
 
-  const internationalPhone = `52${phoneDigits}`;
+  const internationalPhone = toInternationalFormat(appointment.customer_phone);
+
+  // Best-effort validation: only blocks when GreenAPI confirms the number
+  // has no WhatsApp. If the check itself errors (e.g. method unavailable
+  // on the current plan), we proceed with the send.
+  const check = await checkWhatsAppNumber(internationalPhone);
+  if (!check.exists && !check.error) {
+    return NextResponse.json({
+      error: 'Este número no tiene WhatsApp registrado',
+    }, { status: 400 });
+  }
   const staffName = appointment.profiles?.full_name || 'tu lashista';
   const serviceName = appointment.services?.name || 'servicio';
   const date = new Date(appointment.appointment_date + 'T00:00:00').toLocaleDateString('es-MX', {
