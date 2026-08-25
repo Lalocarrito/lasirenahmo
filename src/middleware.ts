@@ -7,16 +7,30 @@ import { NextResponse, type NextRequest } from 'next/server';
  * - Blocks unauthenticated access to /admin/* routes.
  * - Enforces RBAC: only 'admin' and 'staff' roles can access /admin/dashboard.
  * - Cannot be bypassed from the client.
+ *
+ * NOTE: Supabase getUser() only runs for /admin/* routes. Running it on every
+ * request caused MIDDLEWARE_INVOCATION_TIMEOUT (504) on custom domains where
+ * the edge-to-Supabase network round trip is slower.
  */
 export async function middleware(request: NextRequest) {
     const host = request.headers.get('host');
     const url = request.nextUrl.clone();
 
     // Canonical Domain: Redirect lasirenahmo.com to www.lasirenahmo.com
-    // Only apply in production environment when not on a vercel preview/localhost
     if (host === 'lasirenahmo.com') {
         url.host = 'www.lasirenahmo.com';
         return NextResponse.redirect(url, 301);
+    }
+
+    const pathname = request.nextUrl.pathname;
+
+    // Only protected routes need Supabase. Everything else returns immediately.
+    if (!pathname.startsWith('/admin/')) {
+        return NextResponse.next({
+            request: {
+                headers: request.headers,
+            },
+        });
     }
 
     let response = NextResponse.next({
@@ -48,42 +62,34 @@ export async function middleware(request: NextRequest) {
 
     // Refresh session - critical for cookie-based auth.
     // Wrapped in try-catch: getUser() throws AuthApiError when the
-    // refresh token stored in cookies is stale or revoked (e.g. after
-    // signing out on another device). We treat that as "no user".
+    // refresh token stored in cookies is stale or revoked.
     let user = null;
     try {
         const { data } = await supabase.auth.getUser();
         user = data.user;
     } catch {
         // Invalid/expired refresh token — treat as unauthenticated.
-        // The response still carries any cookie-clearing headers that
-        // @supabase/ssr may have set, so we let it pass through.
     }
 
-    const pathname = request.nextUrl.pathname;
+    if (!user) {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = '/admin';
+        return NextResponse.redirect(redirectUrl);
+    }
 
-    // Protect all /admin sub-routes (dashboard, etc.) but allow /admin (login page)
-    if (pathname.startsWith('/admin/')) {
-        if (!user) {
-            const url = request.nextUrl.clone();
-            url.pathname = '/admin';
-            return NextResponse.redirect(url);
-        }
+    // RBAC: Verify the user has admin or staff role in the profiles table
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-        // RBAC: Verify the user has admin or staff role in the profiles table
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        const allowedRoles = ['admin', 'staff'];
-        if (!profile || !allowedRoles.includes(profile.role)) {
-            // User is authenticated but not authorized — redirect to home
-            const url = request.nextUrl.clone();
-            url.pathname = '/';
-            return NextResponse.redirect(url);
-        }
+    const allowedRoles = ['admin', 'staff'];
+    if (!profile || !allowedRoles.includes(profile.role)) {
+        // User is authenticated but not authorized — redirect to home
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = '/';
+        return NextResponse.redirect(redirectUrl);
     }
 
     return response;
