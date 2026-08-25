@@ -71,6 +71,13 @@ export async function sendWhatsApp(params: {
 
     if (status === 200 && data?.idMessage) return { success: true }
 
+    if (status === 466) {
+      const desc = data?.correspondentsStatus?.description
+        || data?.invokeStatus?.description
+        || 'Límite del plan GreenAPI alcanzado (solo 3 contactos/mes en el plan gratis). Cambia al plan Business o a 360dialog.'
+      return { success: false, error: desc }
+    }
+
     const message = data?.message || data?.details || data?.error || `HTTP ${status}`
     return { success: false, error: message }
   } catch (error) {
