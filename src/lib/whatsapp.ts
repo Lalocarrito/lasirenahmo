@@ -4,7 +4,7 @@ export async function sendWhatsApp(params: {
 }): Promise<{ success: boolean; error?: string }> {
   const idInstance = process.env.GREEN_API_ID_INSTANCE
   const apiToken = process.env.GREEN_API_API_TOKEN
-  const apiUrl = process.env.GREEN_API_URL || 'https://api.green-api.com'
+  const apiUrl = process.env.GREEN_API_URL || 'https://api.greenapi.com'
 
   if (!idInstance || !apiToken) {
     return { success: false, error: 'GreenAPI no configurado' }
