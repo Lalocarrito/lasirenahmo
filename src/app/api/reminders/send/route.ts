@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { sendWhatsApp } from '@/lib/ultramsg';
+import { sendWhatsApp } from '@/lib/whatsapp';
 
 export async function POST(request: NextRequest) {
   const { appointmentId } = await request.json();
