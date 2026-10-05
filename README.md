@@ -24,10 +24,7 @@ disponibilidad.
 - [Stack tecnológico](#stack-tecnológico)
 - [Requisitos](#requisitos)
 - [Instalación y ejecución](#instalación-y-ejecución)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Roles y acceso](#roles-y-acceso)
 - [Despliegue](#despliegue)
-- [Documentación](#documentación)
 - [Autor](#autor)
 
 ---
@@ -139,41 +136,6 @@ npm run build
 npm run start
 ```
 
-## Estructura del proyecto
-
-```text
-lasirenahmo/
-├── src/
-│   ├── app/                    # Rutas (App Router)
-│   │   ├── page.tsx            # Landing
-│   │   ├── admin/              # Login + dashboard administrativo
-│   │   ├── perfil/             # Perfil de clientas
-│   │   ├── api/reminders/send/ # Envío de recordatorios por WhatsApp
-│   │   ├── auth/callback/      # Callback de OAuth (Google)
-│   │   ├── confirmar/          # Confirmación de citas por token
-│   │   ├── privacy/ · terms/   # Páginas legales
-│   │   └── layout.tsx · globals.css
-│   ├── components/             # UI: secciones, booking/, client/, admin/, auth/
-│   ├── lib/                    # Clientes Supabase, WhatsApp, phone, logger, utils
-│   ├── hooks/                  # Hooks reutilizables
-│   └── types/                  # Tipos TypeScript
-├── public/                     # Assets estáticos y miniaturas PWA
-├── supabase_schema.sql         # Esquema base + RLS
-├── supabase_production.sql     # Esquema de producción
-├── CHANGELOG.md · AUDITORIA_SEGURIDAD.md
-└── next.config.ts              # Headers de seguridad, imágenes remotas
-```
-
-## Roles y acceso
-
-Los roles se definen en la tabla `profiles` (`admin`, `staff`, `user`):
-
-- **`admin` / `staff`** → acceso a `/admin/dashboard` (validado en el middleware del
-  servidor, no solo en el cliente).
-- **`user`** → área de clientas en `/perfil`.
-
-Al registrarse, un usuario se crea automáticamente como `user` (trigger en `auth.users`).
-El rol `admin` se asigna directamente en la base de datos.
 
 ## Despliegue
 
@@ -183,10 +145,6 @@ El proyecto está pensado para **Vercel**:
 2. Configura las mismas variables de entorno del paso 2.
 3. Despliega. El `middleware` redirige `lasirenahmo.com` → `www.lasirenahmo.com`.
 
-## Documentación
-
-- [Historial de cambios](CHANGELOG.md)
-- [Auditoría de seguridad y calidad](AUDITORIA_SEGURIDAD.md)
 
 ## Autor
 
